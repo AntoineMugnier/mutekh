@@ -96,6 +96,51 @@
 
   %end
 
+  %subsection efm32-tgNNN-*-*
+    %types family
+
+    CONFIG_CPU_ARM32M_CORTEXM3
+    CONFIG_EFM32_FAMILY EFM32_FAMILY_TINY
+
+    CONFIG_HEXO_CPU_STACK_SIZE 0x200
+    CONFIG_PTHREAD_STACK_SIZE  0x200
+
+    CONFIG_CPU_ARM32M_M_IRQ_COUNT 23
+
+    %set BUILD_NAME efm32-tiny
+
+    %subsection efm32-tgNNN-f4-*
+      %types flash
+      CONFIG_EFM32_FLASHSIZE 0x00001000
+    %end
+
+    %subsection efm32-tgNNN-f8-*
+      %types flash
+      CONFIG_EFM32_FLASHSIZE 0x00002000
+    %end
+
+    %subsection efm32-tgNNN-f16-*
+      %types flash
+      CONFIG_EFM32_FLASHSIZE 0x00004000
+    %end
+
+    %subsection efm32-tgNNN-f32-*
+      %types flash
+      CONFIG_EFM32_FLASHSIZE 0x00008000
+    %end
+
+    %subsection efm32-tgNNN-f4-* efm32-tgNNN-f8-*
+      %types sram
+      CONFIG_EFM32_RAMSIZE 0x800
+    %end
+
+    %subsection efm32-tgNNN-f16-* efm32-tgNNN-f32-*
+      %types sram
+      CONFIG_EFM32_RAMSIZE 0x1000
+    %end
+
+  %end
+
   %subsection efm32-gNNN-*-*
     %types family
 

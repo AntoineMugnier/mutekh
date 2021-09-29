@@ -7,6 +7,8 @@
 # include "efm/leopard/irq.h"
 #elif (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GECKO)
 # include "efm/gecko/irq.h"
+#elif (CONFIG_EFM32_FAMILY == EFM32_FAMILY_TINY)
+# include "efm/tiny/irq.h"
 #elif (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO)
 # include "efm/zero/irq.h"
 #elif (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1)

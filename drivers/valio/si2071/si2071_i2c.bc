@@ -1,0 +1,76 @@
+/*
+    This file is part of MutekH.
+
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU Lesser General Public License as
+    published by the Free Software Foundation; version 2.1 of the
+    License.
+
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this program.  If not, see
+    <http://www.gnu.org/licenses/>.
+
+    Copyright (c) 2020, Nicolas Pouillon <nipo@ssji.net>
+*/
+
+.custom i2c
+.name si2071_i2c
+
+#include <device/class/i2c.h>
+#include "si2071.h"
+
+.global %8 hum
+.global %9 temp
+    
+.func si2071_bc_initialize
+    .export si2071_bc_initialize
+    .clobber %0, %1, %2, %3
+
+    cst16       %0,   SI2071_ID2, 0
+    pack16be    %0,   1,  2
+    i2c_wrr     %0,   2,  RESTART
+    i2c_rdr     %0,   4,  STOP
+    unpack8     %0,   4
+
+    cst8 %1, 0x15
+    eq %0, %1
+     end
+    cst8 %1, 0x14
+    eq %0, %1
+     end
+    cst8 %1, 0x0d
+    eq %0, %1
+     end
+    cst8 %1, 0x00
+    eq %0, %1
+     end
+    cst8 %1, 0xff
+    eq %0, %1
+     end
+
+    abort
+.endfunc
+
+.func si2071_bc_read
+    .export si2071_bc_read
+    .clobber %0
+
+    cst8        %0,   SI2071_REG_HUM_HOLD
+    pack8       %0,   1
+    i2c_wrr     %0,   1,  RESTART
+    i2c_rdr     %hum,   2,  STOP
+    unpack16be  %hum,   1,  2
+
+    cst8        %0,   SI2071_REG_TEMP_LAST
+    pack8       %0,   1
+    i2c_wrr     %0,   1,  RESTART
+    i2c_rdr     %temp,   2,  STOP
+    unpack16be  %temp,   1,  2
+
+    end
+.endfunc

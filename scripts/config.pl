@@ -1219,9 +1219,11 @@ sub process_config_auto
 	}
 
 	if ( $dep->{userdefined} ) {
-	    push @{$dep->{depnotice}}, "`$dep->{name}' token could be automatically defined ".
+            my $n = "`$dep->{name}' token could be automatically defined ".
 		"as a dependency of `$opt->{name}' but is explicitly undefined in ".
 		"build configuration file.";
+	    push @{$dep->{depnotice}}, $n
+                unless $n ~~ @{$dep->{depnotice}};
 
 	    debug(1, "config prevents auto define of $dep->{name} as an autodep of $opt->{name}");
 	    return 0;
@@ -1522,6 +1524,31 @@ sub normalize
     }
 }
 
+sub tokens_combine_methods
+{
+    my $opt = shift;
+
+    # specify how to handle provide conflicts
+    if ( $opt->{flags}->{maxval} ) {
+        return sub {
+            my ( $opt, $old, $new ) = @_;
+            return $old > $new ? $old : $new;
+        }
+    } elsif ( $opt->{flags}->{minval} ) {
+        return sub {
+            my ( $opt, $old, $new ) = @_;
+            return $old < $new ? $old : $new;
+        }
+    } elsif ( $opt->{flags}->{sumval} ) {
+        return sub {
+            my ( $opt, $old, $new ) = @_;
+            return $old + $new;
+        }
+    } else {
+        return undef;
+    }
+}
+
 sub tokens_set_methods
 {
     foreach my $opt (values %config_opts) {
@@ -1548,33 +1575,14 @@ sub tokens_set_methods
 
 	} elsif ($opt->{flags}->{value}) {
 
-            my $combine;
-
-	    # specify how to handle provide conflicts
-            if ( $opt->{flags}->{maxval} ) {
-                $combine = sub {
-                    my ( $opt, $old, $new, $dd ) = @_;
-                    return $old > $new ? $old : $new;
-                }
-            } elsif ( $opt->{flags}->{minval} ) {
-                $combine = sub {
-                    my ( $opt, $old, $new, $dd ) = @_;
-                    return $old < $new ? $old : $new;
-                }
-            } elsif ( $opt->{flags}->{sumval} ) {
-                $combine = sub {
-                    my ( $opt, $old, $new, $dd ) = @_;
-                    return $old + $new;
-                }
-            } else {
-                $combine = sub {
+            my $combine = tokens_combine_methods( $opt ) ||
+                sub {
                     my ( $opt, $old, $new, $dd ) = @_;
                     if ( $old ne $new && !$dd ) {
                         push @{$opt->{deperror}}, "Conflict between `$old' and `$new' values for `provide' on `$opt->{name}' token";
                     }
                     return $new;
-                }
-            }
+                };
 
 	    # value token getvalue method returns value provided by provider tokens
 	    $opt->{getvalue} = sub {
@@ -2061,7 +2069,11 @@ sub read_build_config
 	}
 
 	if ($line =~ /^\s* %inherit \s+ (.*?) \s*$/x) {
-            $$section .= ":$1";
+            if ($$section eq "") {
+                $$section = "$1";
+            } else {
+                $$section .= ":$1";
+            }
 	    next;
 	}
 
@@ -2128,10 +2140,30 @@ sub read_build_config
 			  "build configuration file directly.");
 		}
 
-		$val = "defined" if (!defined $val);
+                if (!defined $val) {
+                    $val = "defined";
+                } else {
+                    $val = normalize( $val );
+                }
 
-                error("$file:$lnum: The `".$opt->{name}."' token value has already been defined at $opt->{vlocation}.")
-                    if ($opt->{enforce} && $opt->{value} ne $val);
+                my $old = $opt->{value};
+
+                if ($opt->{userdefined} && $old ne $val) {
+
+                    error("$file:$lnum: The `".$opt->{name}."' token value has already been defined at ".
+                          basename($opt->{vlocation}).".")
+                        if $opt->{enforce};
+
+                    my $combine = tokens_combine_methods( $opt ) ||
+                        sub {
+                            my ( $opt, $old, $new ) = @_;
+                            warning(basename($file).":$lnum: Overriding value of token `".$opt->{name}.
+                                    "' already set at ".basename($opt->{vlocation}).".");
+                            return $new;
+                    };
+
+                    $val = $combine->( $opt, $old, $val );
+                }
 
 		$opt->{vlocation} = "$file:$lnum";
 		$opt->{value} = $val;

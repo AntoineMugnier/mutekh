@@ -115,6 +115,25 @@ FUNC_START(.text, arm_exc_irq)
 
         ARM_EXC_PREEMPT_CLEAR
 
+# ifdef CONFIG_HEXO_CONTEXT_STACK_IRQ
+        /* get tls of cpu main context */
+        mov     r3,     sp
+        ldr     r0,     = cpu_main_context
+        ldr     r0,     [r0, #_offsetof(context_s, tls, 4)]
+
+        /* test if the context is running */
+        mrs     r2,     psp
+        cmp     r2,     r0
+        beq     1f
+
+        /* switch to cpu context stack */
+        ldr     r2,     = arm_context_regs + CPU_ARM_CONTEXT_SP
+        ldr     r2,     [r0, r2]
+        mov     sp,     r2
+1:
+        push    {r3}
+# endif
+
         /* first arg is interrupt number */
         mrs     r0,     ipsr
         uxtb    r0,     r0
@@ -124,12 +143,13 @@ FUNC_START(.text, arm_exc_irq)
         ldr     r1,     [r1]
         blx     r1
 
-# ifdef CONFIG_HEXO_CONTEXT_PREEMPT
-        /* context registers save array from tls */
-        mrs     r1,     psp
-        ldr     r2,     = arm_context_regs /* skip r0 - r3 */ + 16
-        add     r1,     r2
+# ifdef CONFIG_HEXO_CONTEXT_STACK_IRQ
+        /* restore stack pointer */
+        pop     {r3}
+        mov     sp,     r3
+# endif
 
+# ifdef CONFIG_HEXO_CONTEXT_PREEMPT
         b       arm_exc_preempt
 # else
         /* return */
@@ -287,8 +307,6 @@ FUNC_START(.text, arm_exc_fault)
         str     r3,     [sp, #20]
 
 # ifdef CONFIG_HEXO_CONTEXT_PREEMPT
-        /* context registers save array from tls */
-        adds    r1,     #16  /* skip r0 - r3 */
         b       arm_exc_preempt
 # else
         /* return */
@@ -346,7 +364,6 @@ FUNC_START(.text, arm_exc_svcall)
         str     r3,     [sp, #20]
 
 # ifdef CONFIG_HEXO_CONTEXT_PREEMPT
-        add     r1,     #16  /* skip r0 - r3 */
         b       arm_exc_preempt
 # else
         /* return */
@@ -359,7 +376,7 @@ FUNC_END(arm_exc_svcall)
 /********************************************************** restore with preempt */
 
 #ifdef CONFIG_HEXO_CONTEXT_PREEMPT
-FUNC_START(.text, arm_exc_preempt)        /* args: r1 = &arm_context_regs + 16 */
+FUNC_START(.text, arm_exc_preempt)
 
         /* check if a preempt handler has been registered */
         ldr     r2,     = cpu_preempt_handler
@@ -368,13 +385,16 @@ FUNC_START(.text, arm_exc_preempt)        /* args: r1 = &arm_context_regs + 16 *
         beq     2f
 
         /* call preempt handler */
-        push    {r1}
         blx     r0
-        pop     {r1}
 
         /* got pointer to context to switch to ? */
         tst     r0,     r0
         beq     1f
+
+        /* context registers save array from tls */
+        mrs     r1,     psp
+        ldr     r2,     = arm_context_regs /* skip r0 - r3 */ + CPU_ARM_CONTEXT_R4
+        add     r1,     r2
 
         /* save r4 - r11 */
         stmia   r1!,    {r4,r5,r6,r7}
@@ -424,10 +444,3 @@ FUNC_START(.text, arm_exc_preempt)        /* args: r1 = &arm_context_regs + 16 *
 FUNC_END(arm_exc_preempt)
 #endif
 
-// Local Variables:
-// tab-width: 4;
-// c-basic-offset: 4;
-// indent-tabs-mode: nil;
-// End:
-//
-// vim: filetype=cpp:expandtab:shiftwidth=4:tabstop=4:softtabstop=4

@@ -15,6 +15,8 @@
 
 int main(int argc, char **argv)
 {
+  static const uint32_t scale = 4;
+
   if (argc <= 1)
     {
       fprintf(stderr, "usage: %s bytecode.out\n", argv[0]);
@@ -33,21 +35,8 @@ int main(int argc, char **argv)
 
   /* Set up screen */
   SDL_Surface *screen;
-  switch (CONFIG_GFX_DEFAULT_L2BPP)
-    {
-    case 0 ... 3:
-      screen = SDL_SetVideoMode(512, 256, 8, SDL_SWSURFACE);
-      assert(screen->format->BitsPerPixel == 8);
-      break;
-    case 4:
-      screen = SDL_SetVideoMode(512, 256, 16, SDL_SWSURFACE);
-      assert(screen->format->BitsPerPixel == 16);
-      break;
-    case 5:
-      screen = SDL_SetVideoMode(512, 256, 32, SDL_SWSURFACE);
-      assert(screen->format->BitsPerPixel == 32);
-      break;
-    }
+  screen = SDL_SetVideoMode(64 * scale, 128 * scale, 32, SDL_SWSURFACE);
+  assert(screen->format->BitsPerPixel == 32);
 
   int quit = 0;
 
@@ -138,51 +127,55 @@ int main(int argc, char **argv)
           struct gfx_surface_s *s = ctx.s + n;
 
           SDL_LockSurface(screen);
-          uint8_t *pdst = (uint8_t*)screen->pixels;
-          uint_fast16_t bytes = screen->format->BytesPerPixel;
+          uint32_t *px = (uint32_t*)screen->pixels;
+          uint_fast32_t stride = screen->pitch / screen->format->BytesPerPixel;
 
-          uint_fast32_t ys = 0, ye = screen->h;
-          uint_fast32_t xs = 0, xe = screen->w;
+          uint_fast32_t yl = 0, yh = screen->h / scale;
+          uint_fast32_t xl = 0, xh = screen->w / scale;
 
           if (op & 0x0040)
             {
               uint32_t p0 = bc_get_reg(&vm, op & 15);
-              ys = gfx_vector_yint(p0);
-              xs = gfx_vector_xint(p0);
+              yl = gfx_vector_yint(p0);
+              xl = gfx_vector_xint(p0);
 
               uint32_t p1 = bc_get_reg(&vm, 15);
-              ye = ys + gfx_vector_yint(p1);
-              if (ye > (uint_fast16_t)screen->h)
-                ye = screen->h;
+              yh = yl + gfx_vector_yint(p1) * scale;
+              if (yh > (uint_fast16_t)screen->h)
+                yh = screen->h;
 
-              xs = xs + gfx_vector_xint(p1);
-              if (xe > (uint_fast16_t)screen->w)
-                xe = screen->w;
+              xh = xl + gfx_vector_xint(p1) * scale;
+              if (xh > (uint_fast16_t)screen->w)
+                xh = screen->w;
             }
 
-          for (uint_fast16_t y = ys; y < ye; y++)
+          for (uint_fast16_t y = yl * scale; y < yh * scale; y++)
             {
-              for (uint_fast16_t x = xs; x < xe; x++)
+              for (uint_fast16_t x = xl * scale; x < xh * scale; x++)
                 {
-                  gfx_pixel_t p = gfx_get_pixel_safe(s, x - xs, y - ys);
+                  uint32_t *pixel = px + stride * y + x;
+                  gfx_pixel_t p = gfx_get_pixel_safe(s,
+                                                     x / scale - xl / scale,
+                                                     y / scale - yl / scale);
+                  uint32_t color = 0;
+                  uint8_t r, g, b;
 
                   switch (CONFIG_GFX_DEFAULT_L2BPP)
                     {
-                    case 0 ... 3: {
-                      uint32_t h = 1 << gfx_fmt_desc[s->fmt].l2bpp;
-                      *pdst = (0x100 * p) >> h;
+                    case 0 ... 3:
+                      color = (0x100 * p) >> (1 << gfx_fmt_desc[s->fmt].l2bpp);
+                      color *= 0x10101;
                       break;
-                    }
                     case 4:
-                      *(uint16_t*)pdst = p;
+                      /* Fixme */
+                      color = p;
                       break;
                     case 5:
-                      *(uint32_t*)pdst = p;
+                      color = p;
                       break;
                     }
-                  pdst += bytes;
+                  *pixel = color;
                 }
-              pdst += screen->pitch - screen->w * bytes;
             }
           SDL_UnlockSurface(screen);
           SDL_Flip(screen);
@@ -197,4 +190,3 @@ int main(int argc, char **argv)
 
   return 0;
 }
-

@@ -41,6 +41,7 @@
 
 #include "ble.h"
 #include "ble_debug.h"
+#include "ble_trx_gpio.h"
 
 #define dprintk(...) do{}while(0)
 //#define dprintk printk
@@ -556,12 +557,14 @@ void nrf5x_ble_context_start_first(struct nrf5x_ble_private_s *pv)
 
     switch (pv->current_params.mode) {
     case MODE_TX:
+      nrf5x_ble_trx_gpio_tx();
       nrf_ppi_enable_mask(0
                             | (1 << PPI_RTC_ENABLE_TXEN)
                             | (1 << PPI_RTC_MATCH_START));
       break;
 
     case MODE_RX:
+      nrf5x_ble_trx_gpio_rx();
       nrf_ppi_enable_mask(0
                             | (1 << PPI_RTC_ENABLE_RXEN)
                             | (1 << PPI_RTC_MATCH_START));

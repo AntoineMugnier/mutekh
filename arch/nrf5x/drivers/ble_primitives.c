@@ -41,6 +41,7 @@
 
 #include "ble.h"
 #include "ble_debug.h"
+#include "ble_trx_gpio.h"
 
 void nrf5x_ble_rtc_start(struct nrf5x_ble_private_s *pv)
 {
@@ -133,6 +134,7 @@ void nrf5x_ble_radio_init(void)
 
   nrf_task_trigger(BLE_RADIO_ADDR, NRF_RADIO_STOP);
   nrf_task_trigger(BLE_RADIO_ADDR, NRF_RADIO_DISABLE);
+  nrf5x_ble_trx_gpio_off();
 }
 
 void nrf5x_ble_rtc_init(void)
@@ -239,6 +241,7 @@ void nrf5x_ble_radio_disable(struct nrf5x_ble_private_s *pv)
   nrf_event_clear(BLE_RADIO_ADDR, NRF_RADIO_ADDRESS);
   nrf_event_clear(BLE_RADIO_ADDR, NRF_RADIO_END);
   nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_BCC, 16);
+  nrf5x_ble_trx_gpio_off();
 }
 
 error_t nrf5x_ble_data_setup(struct nrf5x_ble_private_s *pv)
@@ -323,7 +326,7 @@ void nrf5x_ble_config_init(const struct nrf5x_ble_params_s *params)
     break;
   }
 
-  nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_TXPOWER, params->tx_power / 8);
+  nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_TXPOWER, params->tx_power);
   nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_PCNF0, pcnf0);
   nrf_reg_set(BLE_RADIO_ADDR, NRF_RADIO_PCNF1, 0
               | (packet_max_size << NRF_RADIO_PCNF1_MAXLEN_OFFSET)
@@ -440,9 +443,11 @@ void nrf5x_ble_pipelined_reset(struct nrf5x_ble_private_s *pv)
 
   switch (pv->current_params.mode) {
   case MODE_TX:
+    nrf5x_ble_trx_gpio_tx();
     nrf_task_trigger(BLE_RADIO_ADDR, NRF_RADIO_TXEN);
     break;
   case MODE_RX:
+    nrf5x_ble_trx_gpio_rx();
     nrf_task_trigger(BLE_RADIO_ADDR, NRF_RADIO_RXEN);
     break;
   }

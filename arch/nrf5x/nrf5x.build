@@ -9,6 +9,9 @@
 %section nrf51?22-??ac
   %inherit nrf5x-51822-256-32
 
+%section nrf52811-??aa
+  %inherit nrf5x-52811-192-24
+
 %section nrf52820-??aa
   %inherit nrf5x-52820-256-32
 
@@ -17,6 +20,9 @@
 
 %section nrf52832-??ab
   %inherit nrf5x-52832-256-32
+
+%section nrf52820-??ac
+  %inherit nrf5x-52820-256-32
 
 %section nrf52840-??aa
   %inherit nrf5x-52840-1024-256
@@ -114,6 +120,31 @@
     CONFIG_NRF5X_GPIO_COUNT 31
   %end
 
+  %subsection nrf5x-52811-*-*
+    %types family
+    %set BUILD_NAME nrf52811
+
+    CONFIG_NRF5X_MODEL 52811
+    CONFIG_CPU_ARM32M_CORTEXM4
+    CONFIG_CPU_ARM32M_TIMER_SYSTICK
+    CONFIG_CPU_ARM32M_CLOCK undefined
+    CONFIG_CPU_ARM32M_M_IRQ_COUNT 31
+    CONFIG_NRF5X_GPIO_COUNT 32
+  %end
+
+  %subsection nrf5x-52820-*-*
+    %types family
+    %set BUILD_NAME nrf52820
+
+    CONFIG_NRF5X_MODEL 52820
+    CONFIG_CPU_ARM32M_CORTEXM4
+    CONFIG_CPU_ARM32M_TIMER_SYSTICK
+    CONFIG_CPU_ARM32M_CLOCK undefined
+    CONFIG_CPU_ARM32M_M_IRQ_COUNT 32
+    # Actually lie about this, controller is 32-bit version
+    CONFIG_NRF5X_GPIO_COUNT 32
+  %end
+
   %subsection nrf5x-52832-*-*
     %types family
     %set BUILD_NAME nrf52832
@@ -156,6 +187,12 @@
     CONFIG_LOAD_ROM_RO_SIZE 0x00020000
   %end
 
+  %subsection nrf5x-*-192-*
+    %types flash
+
+    CONFIG_LOAD_ROM_RO_SIZE 0x00030000
+  %end
+
   %subsection nrf5x-*-256-*
     %types flash
 
@@ -178,6 +215,12 @@
     %types sram
 
     CONFIG_NRF5X_RAMSIZE 0x4000
+  %end
+
+  %subsection nrf5x-*-*-24
+    %types sram
+
+    CONFIG_NRF5X_RAMSIZE 0x6000
   %end
 
   %subsection nrf5x-*-*-32

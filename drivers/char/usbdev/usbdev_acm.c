@@ -20,7 +20,7 @@
 
 */
 
-#define LOGK_MODULE_ID "uacm"
+#define LOGK_MODULE_ID "uAcm"
 
 #include <string.h>
 #include <stdio.h>
@@ -158,7 +158,7 @@ static const struct usbdev_interface_default_s interface_cdc_data0 =
       .bInterfaceClass = USB_DEV_CLASS_COMM_DATA,
       .bInterfaceSubClass = 0,
       .bInterfaceProtocol = 0,
-      .iInterface =1
+      .iInterface = 1
     },
     USBDEV_ENDPOINT(&ep_bulk_in, &ep_bulk_out)
   },

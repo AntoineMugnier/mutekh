@@ -33,7 +33,7 @@
 
 #define GFX_SQRT2_2_Q0_32 0xb504f334 /* sqrt(2) / 2 in Q0.32 fixed point */
 
-const int32_t gfx_sin_table[129];
+extern const int32_t gfx_sin_table[129];
 
 /** @This returns a Q2.30 signed fixed point. angle period is 512 */
 inline int32_t gfx_sin(uint_fast16_t x)

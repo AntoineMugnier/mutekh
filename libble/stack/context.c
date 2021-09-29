@@ -43,7 +43,7 @@ error_t ble_stack_context_init(struct ble_stack_context_s *ctx,
                                const char *rtc_name,
                                const char *rng_name,
                                const char *sec_name,
-                               const struct persist_config *persist)
+                               struct persist_context_s *persist)
 {
   error_t err;
   struct dev_rng_s rng;

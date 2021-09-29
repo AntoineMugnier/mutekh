@@ -77,6 +77,7 @@ DRIVER_PV(struct nrf5x_clock_context_s
   uint8_t configid_app;
 
   struct kroutine_s configid_updater;
+  struct kroutine_s sync_clock_updater;
 
   bool_t lfclk_required;
 #if LFRC_CAL
@@ -341,20 +342,20 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_temp_irq)
 
     if (nrf5x_clock_hfxo_is_running())
       nrf5x_clock_lf_calibrate(pv);
-    else
+    else {
       nrf5x_clock_hfxo_start();
+      if (nrf5x_clock_hfxo_is_running())
+        kroutine_exec(&pv->sync_clock_updater);
+    }
   } else {
     pv->cal_timeout_count = 0;
   }
 }
 #endif
 
-static DEV_IRQ_SRC_PROCESS(nrf5x_clock_irq)
+static void nrf5x_clock_hw_refresh(struct nrf5x_clock_context_s *pv,
+                                   bool_t lf_check, bool_t hf_check)
 {
-  struct device_s *dev = ep->base.dev;
-  struct nrf5x_clock_context_s *pv = dev->drv_pv;
-  bool_t lf_check = 0;
-  bool_t hf_check = 0;
 
 #if defined(CONFIG_DRIVER_NRF52_USBD)
   if (nrf_event_check(POWER_ADDR, NRF_POWER_USBDETECTED)) {
@@ -457,7 +458,6 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_clock_irq)
           nrf5x_clock_lf_calibrate(pv);
         else
           nrf5x_clock_hfxo_start();
-
         nrf_task_trigger(CLOCK_ADDR, NRF_CLOCK_CTSTART);
       }
 #endif
@@ -514,6 +514,14 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_clock_irq)
       nrf_task_trigger(CLOCK_ADDR, NRF_CLOCK_CTSTART);
   }
 #endif
+}
+
+static DEV_IRQ_SRC_PROCESS(nrf5x_clock_irq)
+{
+  struct device_s *dev = ep->base.dev;
+  struct nrf5x_clock_context_s *pv = dev->drv_pv;
+
+  nrf5x_clock_hw_refresh(pv, 0, 0);
 }
 
 static DEV_CMU_CONFIG_MUX(nrf5x_clock_config_mux)
@@ -651,8 +659,8 @@ static DEV_CMU_COMMIT(nrf5x_clock_commit)
   if (nrf5x_clock_hf_is_running(NRF_CLOCK_HF_SRC_XTAL)
       && pv->hf_src == NRF_CLOCK_HF_SRC_RC) {
     nrf5x_clock_hfxo_stop();
-    while (nrf5x_clock_hfxo_is_running())
-      ;
+    /* while (nrf5x_clock_hfxo_is_running()) */
+    /*   ; */
   }
 
 #if !defined(HAS_HFOSC_64M)
@@ -662,8 +670,11 @@ static DEV_CMU_COMMIT(nrf5x_clock_commit)
               : NRF_CLOCK_XTALFREQ_32MHZ);
 #endif
 
-  if (pv->hf_src == NRF_CLOCK_HF_SRC_XTAL)
+  if (pv->hf_src == NRF_CLOCK_HF_SRC_XTAL) {
     nrf5x_clock_hfxo_start();
+    if (nrf5x_clock_hfxo_is_running())
+      kroutine_exec(&pv->sync_clock_updater);
+  }
 
   return 0;
 }
@@ -827,6 +838,16 @@ static KROUTINE_EXEC(nrf5x_clock_configid_update)
   dev_cmu_configid_set(dev, &nrf5x_clock_config_ops, pv->configid_next);
 }
 
+static KROUTINE_EXEC(nrf5x_clock_sync_update)
+{
+  struct nrf5x_clock_context_s *pv = KROUTINE_CONTAINER(kr, *pv, sync_clock_updater);
+  struct device_s *dev = pv->src[0].dev;
+
+  nrf5x_clock_hw_refresh(pv, 1, 1);
+
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
+}
+
 const struct driver_s nrf5x_clock_drv;
 
 static DEV_INIT(nrf5x_clock_init)
@@ -899,6 +920,7 @@ static DEV_INIT(nrf5x_clock_init)
   nrf_task_trigger(CLOCK_ADDR, NRF_CLOCK_HFCLKSTOP);
 
   kroutine_init_deferred(&pv->configid_updater, &nrf5x_clock_configid_update);
+  kroutine_init_deferred(&pv->sync_clock_updater, &nrf5x_clock_sync_update);
 
   for (i = 0; i < NRF_CLOCK_SRC_COUNT; i++)
     dev_clock_source_init(dev, &pv->src[i], &nrf5x_clock_ep_setup);

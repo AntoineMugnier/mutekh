@@ -18,6 +18,8 @@
     Copyright (c) 2016, Nicolas Pouillon, <nipo@ssji.net>
 */
 
+#define LOGK_MODULE_ID "6408"
+
 #include <hexo/bit.h>
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
@@ -27,11 +29,6 @@
 #include <device/class/i2c.h>
 
 #include "pcal6408a_io.o.h"
-
-//#define dprintk printk
-#ifndef dprintk
-#define dprintk(x...) do {} while (0)
-#endif
 
 enum pcal6408a_state_e
 {
@@ -68,7 +65,7 @@ static void pcal6408a_handle_next(struct device_s *dev)
     return;
 
   if (pv->until_evented) {
-    dprintk("%s evented, reading\n", __FUNCTION__);
+    logk_debug("%s evented, reading", __FUNCTION__);
     pv->until_evented = 0;
     pv->state = STATE_NOTIFY_READ;
     dev_i2c_bytecode_start(&pv->i2c, &pv->i2c_rq, &pcal6408a_get_input, 0);
@@ -79,7 +76,7 @@ static void pcal6408a_handle_next(struct device_s *dev)
     uint_fast8_t mask = 0;
     uint_fast8_t value = 0;
 
-    dprintk("%s util mask dirty\n", __FUNCTION__);
+    logk_debug("%s util mask dirty", __FUNCTION__);
 
     GCT_FOREACH(dev_request_queue, &pv->until_queue, brq, {
         struct dev_gpio_rq_s *rq = dev_gpio_rq_s_cast(brq);
@@ -101,7 +98,7 @@ static void pcal6408a_handle_next(struct device_s *dev)
   if (!rq)
     return;
 
-  dprintk("%s handling %p %d\n", __FUNCTION__, rq, rq->type);
+  logk_debug("%s handling %p %d", __FUNCTION__, rq, rq->type);
 
   switch (rq->type) {
   case DEV_GPIO_MODE: {
@@ -167,7 +164,7 @@ static KROUTINE_EXEC(pcal6408a_i2c_done)
     = KROUTINE_CONTAINER(kr, *pv, i2c_rq.base.base.kr);
   struct device_s *dev = pv->i2c_rq.pvdata;
 
-  dprintk("%s\n", __FUNCTION__);
+  logk_debug("%s", __FUNCTION__);
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
@@ -181,7 +178,7 @@ static KROUTINE_EXEC(pcal6408a_i2c_done)
         uint_fast8_t mask = (rq->until.mask[0] << rq->io_first);
         uint_fast8_t data = (rq->until.data[0] << rq->io_first);
 
-        dprintk("%s %p %02x %02x %02x %02x %02x\n",
+        logk_debug("%s %p %02x %02x %02x %02x %02x",
                 __FUNCTION__, rq, range, mask, data, cur,
                 range & mask & (data ^ cur));
 
@@ -199,7 +196,7 @@ static KROUTINE_EXEC(pcal6408a_i2c_done)
         if (rq->type == DEV_GPIO_GET_INPUT) {
           uint_fast8_t range = bit_range(rq->io_first, rq->io_last);
           rq->input.data[0] = ((bc_get_reg(&pv->i2c_rq.vm, 0) & range) >> rq->io_first);
-          dprintk("%s %p io get done %02x\n", __FUNCTION__, rq, rq->input.data[0]);
+          logk_debug("%s %p io get done %02x", __FUNCTION__, rq, rq->input.data[0]);
           dev_gpio_rq_remove(&pv->queue, rq);
           dev_gpio_rq_done(rq);
         }
@@ -209,7 +206,7 @@ static KROUTINE_EXEC(pcal6408a_i2c_done)
   case STATE_IO_SET: {
     struct dev_gpio_rq_s *rq = dev_gpio_rq_head(&pv->queue);
     if (rq && (rq->type == DEV_GPIO_SET_OUTPUT || rq->type == DEV_GPIO_MODE)) {
-      dprintk("%s %p io set done\n", __FUNCTION__, rq);
+      logk_debug("%s %p io set done", __FUNCTION__, rq);
       dev_gpio_rq_pop(&pv->queue);
       dev_gpio_rq_done(rq);
     }
@@ -234,12 +231,12 @@ static DEV_GPIO_REQUEST(pcal6408a_request)
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
   switch (rq->type) {
   default:
-    dprintk("%s request %p\n", __FUNCTION__, rq);
+    logk_debug("%s request %p", __FUNCTION__, rq);
     dev_gpio_rq_pushback(&pv->queue, rq);
     break;
 
   case DEV_GPIO_UNTIL:
-    dprintk("%s until %p\n", __FUNCTION__, rq);
+    logk_debug("%s until %p", __FUNCTION__, rq);
     dev_gpio_rq_pushback(&pv->until_queue, rq);
     pv->until_mask_dirty = 1;
     break;
@@ -254,7 +251,7 @@ static DEV_IRQ_SRC_PROCESS(pcal6408a_irq)
   struct pcal6408a_priv_s *pv = dev->drv_pv;
 
   lock_spin(&dev->lock);
-  dprintk("%s\n", __FUNCTION__);
+  logk_debug("%s", __FUNCTION__);
   pv->until_evented = 1;
   pcal6408a_handle_next(dev);
   lock_release(&dev->lock);

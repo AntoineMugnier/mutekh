@@ -39,7 +39,6 @@
 #endif
 
 struct persist_context_s;
-struct persist_config;
 struct dev_rng_s;
 struct ble_peer_s;
 
@@ -64,7 +63,7 @@ struct ble_security_db_s
   struct dev_rng_s *rng;
 #endif
 #if defined(CONFIG_BLE_SECURITY_DB)
-  struct persist_context_s persist;
+  struct persist_context_s *persist;
 
   uint8_t pk[16];
   uint8_t irk[16];
@@ -80,7 +79,7 @@ struct ble_security_db_s
    NULL if Security DB is @ref {#CONFIG_BLE_SECURITY_DB} {disabled}
  */
 error_t ble_security_db_init(struct ble_security_db_s *security_db,
-                             const struct persist_config *persist,
+                             struct persist_context_s *persist,
                              const char *aes,
                              struct dev_rng_s *rng);
 

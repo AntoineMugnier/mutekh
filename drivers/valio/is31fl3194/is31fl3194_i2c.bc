@@ -1,0 +1,83 @@
+/*
+    This file is part of MutekH.
+
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU Lesser General Public License as
+    published by the Free Software Foundation; version 2.1 of the
+    License.
+
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this program.  If not, see
+    <http://www.gnu.org/licenses/>.
+
+    Copyright (c) Nicolas Pouillon <nipo@ssji.net> 2021
+*/
+
+.custom i2c
+.name is31fl3194_i2c
+
+#include <device/class/i2c.h>
+#include "is31fl3194.h"
+
+.global %9 reset_time
+
+#define REG_SET(tmp, reg, value) \
+    cst16       tmp,   ((value) << 8) | (reg), 0 ;\
+    pack16le    tmp,   1,  2 ;\
+    i2c_wrr     tmp,   2,  STOP
+
+#define REG_SET_REG(tmp, reg, value) \
+    mov         tmp,   value ; \
+    shi32l      tmp,   8 ; \
+    add8        tmp,   reg ; \
+    pack16le    tmp,   1,  2 ;\
+    i2c_wrr     tmp,   2,  STOP
+
+#define REG_GET(dst, reg) \
+    cst8        dst,   (reg) ;\
+    pack8       dst,   1 ;\
+    i2c_wrr     dst,   1, RESTART ;\
+    i2c_rdr     dst,   1, STOP ;\
+    unpack8     dst,   1
+
+.func fl3194_bc_initialize
+    .export fl3194_bc_initialize
+    .clobber %4, %5
+
+    REG_GET(%4, FL3194_PRODUCT_ID)
+    cst8 %5, FL3194_PRODUCT_ID_VALUE
+    neq %4, %5
+     abort
+
+    REG_SET(%4, FL3194_RESET, FL3194_RESET_COMMIT)
+    i2c_yield_delay %reset_time
+    REG_SET(%4, FL3194_MODE, 0x01)
+    REG_SET(%4, FL3194_OUT_ENABLE, 0x07)
+    REG_SET(%4, FL3194_CURRENT_BAND, 0x00)
+    REG_SET(%4, FL3194_HOLD, 0x00)
+    REG_SET(%4, FL3194_CURRENT(R), 0x00)
+    REG_SET(%4, FL3194_CURRENT(G), 0x00)
+    REG_SET(%4, FL3194_CURRENT(B), 0x00)
+    REG_SET(%4, FL3194_UPDATE, FL3194_UPDATE_COMMIT)
+
+    end
+.endfunc
+
+.func fl3194_bc_update
+    .export fl3194_bc_update
+    .input %0, %1, %2
+    .clobber %4
+
+    REG_SET_REG(%4, FL3194_CURRENT(R), %0)
+    REG_SET_REG(%4, FL3194_CURRENT(G), %1)
+    REG_SET_REG(%4, FL3194_CURRENT(B), %2)
+    REG_SET(%4, FL3194_UPDATE, FL3194_UPDATE_COMMIT)
+
+    end
+
+.endfunc

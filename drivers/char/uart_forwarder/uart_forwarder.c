@@ -330,7 +330,7 @@ static DEV_INIT(uart_forwarder_init)
                                         DRIVER_CLASS_CHAR);
 
     if (ret) {
-      logk_error("Cannot get %s device", ep_name[src]);
+      logk_fatal("Cannot get %s device", ep_name[src]);
 
       if (src == EP_SLAVE)
         device_put_accessor(&cdev[EP_MASTER].base);
@@ -350,7 +350,7 @@ static DEV_INIT(uart_forwarder_init)
   pv = mem_alloc(alloc_size, mem_scope_sys);
 
   if (!pv) {
-    logk_error("Cannot allocate memory");
+    logk_fatal("Cannot allocate memory");
     device_put_accessor(&cdev[EP_MASTER].base);
     device_put_accessor(&cdev[EP_SLAVE].base);
     return -ENOMEM;

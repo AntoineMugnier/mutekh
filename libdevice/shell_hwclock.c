@@ -72,11 +72,14 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_hwclock_set)
   error_t err = 0;
   struct valio_hwclock_s date;
 
-  err = dev_valio_wait_op(DEVICE_VALIO_READ, &c->accessor, VALIO_HWCLOCK_DATE, &date);
-  if (err) {
-    termui_con_printf(con, "Cannot read current date: %d\n", err);
+  if ((used & (HWCLOCK_OPT_DATE | HWCLOCK_OPT_TIME | HWCLOCK_OPT_DOW))
+      != (HWCLOCK_OPT_DATE | HWCLOCK_OPT_TIME | HWCLOCK_OPT_DOW)) {
+    err = dev_valio_wait_op(DEVICE_VALIO_READ, &c->accessor, VALIO_HWCLOCK_DATE, &date);
+    if (err) {
+      termui_con_printf(con, "Cannot read current date: %d\n", err);
 
-    return err;
+      return err;
+    }
   }
 
   if (used & HWCLOCK_OPT_DATE) {

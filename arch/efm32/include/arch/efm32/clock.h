@@ -8,6 +8,8 @@
 # include "efm/leopard/clock.h"
 #elif (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GECKO)
 # include "efm/gecko/clock.h"
+#elif (CONFIG_EFM32_FAMILY == EFM32_FAMILY_TINY)
+# include "efm/tiny/clock.h"
 #elif (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO)
 # include "efm/zero/clock.h"
 #else
