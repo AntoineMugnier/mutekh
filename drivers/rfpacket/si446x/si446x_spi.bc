@@ -331,7 +331,7 @@ tune_done:
         .clobber %0, %1 tmp, %2, %3, %4, %5, %6, %10, %11, %12, %13
         .export si446x_entry_rx_wake_up
         /* Update RX channel */
-        cst32                   %0,                      d0x080000 | SI446X_START_RX_CMD,   0
+        cst32                   %0,                      0x080000 | SI446X_START_RX_CMD,   0
         shi32l                  %channel,                8
         or32                    %0,                      %channel
         pack32le                %0,                      1,     3
