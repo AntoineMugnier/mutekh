@@ -1201,7 +1201,7 @@ static DEV_INIT(si446x_init)
   static const gpio_width_t pin_wmap[4] = {1, 1, 1, 1};
 
   if (device_gpio_setup(gpio, dev, ">sdn:1 <nirq:1 <cts:1"
-#ifdef CONFIG_DRIVER_RFPACKET_SI446X_TCXO_EN
+#ifdef CONFIG_DRIVER_RFPACKET_SI446X_TCXO
                         " >xoen?:1"
 #endif
                         , pv->pin_map, NULL))
