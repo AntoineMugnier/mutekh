@@ -20,24 +20,44 @@
 
 */
 
-#include "null.h"
-
 #include <hexo/types.h>
+#include <device/class/char.h>
 #include <device/device.h>
 #include <device/driver.h>
 #include <device/resources.h>
 
 DRIVER_PV(struct {});
 
-#define dev_null_cancel (dev_char_cancel_t*)&dev_driver_notsup_fcn
-
-DEV_CHAR_REQUEST(dev_null_request)
+static DEV_CHAR_CANCEL(dev_null_cancel)
 {
   switch (rq->type)
     {
     case DEV_CHAR_READ_PARTIAL:
     case DEV_CHAR_READ:
-      rq->error = -EPIPE;
+    case DEV_CHAR_DISCARD:
+    case DEV_CHAR_READ_FRAME:
+    case DEV_CHAR_READ_POLL:
+      return 0;
+    default:
+      return -EBUSY;
+    }
+}
+
+static DEV_CHAR_REQUEST(dev_null_request)
+{
+  switch (rq->type)
+    {
+    case DEV_CHAR_READ_PARTIAL:
+    case DEV_CHAR_READ:
+    case DEV_CHAR_DISCARD:
+    case DEV_CHAR_READ_FRAME:
+    case DEV_CHAR_READ_POLL:
+      rq->error = 0;
+      break;                    /* wait for cancel */
+
+    case DEV_CHAR_READ_NONBLOCK:
+      rq->error = 0;
+      dev_char_rq_done(rq);
       break;
 
       /* Eat everything */
@@ -45,24 +65,27 @@ DEV_CHAR_REQUEST(dev_null_request)
     case DEV_CHAR_WRITE_FLUSH:
     case DEV_CHAR_WRITE_PARTIAL:
     case DEV_CHAR_WRITE:
+    case DEV_CHAR_WRITE_NONBLOCK_FLUSH:
+    case DEV_CHAR_WRITE_NONBLOCK:
+    case DEV_CHAR_WRITE_FRAME:
       rq->data += rq->size;
       rq->size = 0;
+    case DEV_CHAR_WRITE_POLL:
       rq->error = 0;
+      dev_char_rq_done(rq);
       break;
 
     default:
       rq->error = -ENOTSUP;
     }
-
-  dev_char_rq_done(rq);
 }
 
-DEV_INIT(dev_null_init)
+static DEV_INIT(dev_null_init)
 {
   return 0;
 }
 
-DEV_CLEANUP(dev_null_cleanup)
+static DEV_CLEANUP(dev_null_cleanup)
 {
   return 0;
 }
