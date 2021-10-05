@@ -550,9 +550,9 @@ struct bc_context_s
 
 #ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
   /** address of writable data segment when sandboxed */
-  uintptr_t data_base;
+  void *data_base;
   /** mask address of writable data segment when sandboxed */
-  uintptr_t data_addr_mask;
+  uintptr_t data_end;
   /** maximum number of executed cycles by a single call to @ref bc_run_sandbox */
   uint16_t max_cycles;
 #endif
@@ -585,15 +585,11 @@ bc_init(struct bc_context_s *ctx,
         code segment specified in the bytecode descriptor. Code base
         address inside the virtual machine is 0.
       @item Load and store instructions addresses are translated from
-        0x80000000 to the @tt data_base address and the address is
-        masked according to @tt data_addr_bits. Loads
+        0x80000000 to the @tt data_base address. Loads
         below 0x8000000 are translated to the code segment.
       @item The @tt ccall instruction can not be used.
       @item The @tt abort instruction is equivalent to @tt die.
     @end list
-
-    When the @tt data_addr_bits parameter is not 0, it must be at
-    least 8 and @tt data_base must point to a 8 bytes aligned buffer.
 
     When in sandbox mode on a 64 bits target, instructions wont touch
     registers above bit 31. This makes the sandbox a 32 bits virtual
@@ -605,7 +601,7 @@ bc_init(struct bc_context_s *ctx,
 */
 config_depend(CONFIG_MUTEK_BYTECODE_SANDBOX)
 void bc_init_sandbox(struct bc_context_s *ctx, const struct bc_descriptor_s *desc,
-                     void *data_base, uint_fast8_t data_addr_bits,
+                     void *data_base, size_t data_size,
                      uint_fast16_t cycles);
 
 /** @This updates the remaining number of cycles before the @ref bc_run

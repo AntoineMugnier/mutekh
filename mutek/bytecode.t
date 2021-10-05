@@ -117,7 +117,7 @@ bc_init(struct bc_context_s *ctx,
 #ifdef CONFIG_MUTEK_BYTECODE_SANDBOX
 void
 bc_init_sandbox(struct bc_context_s *ctx, const struct bc_descriptor_s *desc,
-                void *data_base, uint_fast8_t data_addr_bits,
+                void *data_base, size_t data_size,
                 uint_fast16_t max_cycles)
 {
   ctx->vpc = desc->code;
@@ -128,19 +128,8 @@ bc_init_sandbox(struct bc_context_s *ctx, const struct bc_descriptor_s *desc,
   ctx->desc = desc;
   ctx->sandbox = 1;
   ctx->max_cycles = max_cycles;
-  if (data_addr_bits)
-    {
-      assert(data_addr_bits >= 3);
-      assert(((uintptr_t)data_base & 7) == 0);
-      ctx->data_base = (uintptr_t)data_base;
-      ctx->data_addr_mask = bit(data_addr_bits) - 1;
-    }
-  else
-    {
-      static uint64_t dummy;
-      ctx->data_base = (uintptr_t)&dummy;
-      ctx->data_addr_mask = 7;
-    }
+  ctx->data_base = data_base;
+  ctx->data_end = data_size + 0x80000000;
 #ifdef CONFIG_MUTEK_BYTECODE_TRACE
   ctx->trace = BC_TRACE_DISABLED;
 #endif
@@ -489,7 +478,7 @@ error_t bc_set_sandbox_pc(struct bc_context_s *ctx, uint32_t pc)
   return 0;
 }
 
-void *
+inline void *
 bc_translate_addr(struct bc_context_s *ctx,
                   bc_reg_t addr_, size_t size,
                   bool_t writable)
@@ -503,13 +492,10 @@ bc_translate_addr(struct bc_context_s *ctx,
 
   if (addr & 0x80000000)    /* rw data segment */
     {
-      uintptr_t m = ctx->data_addr_mask;
-
-      addr &= m;
-      if (addr + size > m)
+      if (end > ctx->data_end)
         return NULL;
 
-      addr += ctx->data_base;
+      addr = addr - 0x80000000 + (uintptr_t)ctx->data_base;
     }
   else                      /* code segment */
     {
@@ -686,23 +672,10 @@ static bool_t bc_run_##fcname##_ldst(const struct bc_descriptor_s * __restrict__
   BC_CONFIG_SANDBOX(
     if (sandbox)
       {
-        if (addr & 0x80000000)    /* rw data segment */
-          {
-            addr &= ctx->data_addr_mask;
-            addr += ctx->data_base;
-          }
-        else                      /* code segment */
-          {
-            if (op & 2 /* store */)
-              return 1;
-
-            size_t s = desc->flags & BC_FLAGS_SIZEMASK;
-            if (addr + w > s)
-              return 1;
-
-            /* address translation */
-            addr += (uintptr_t)desc->code;
-          }
+        void *a = bc_translate_addr(ctx, addr, w, op & 2);
+        if (!a)
+          return 1;
+        addr = (uintptr_t)a;
 
         if (addr & (w - 1))       /* not aligned */
           return 1;
