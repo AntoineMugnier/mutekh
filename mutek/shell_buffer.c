@@ -110,30 +110,6 @@ void shell_buffer_drop(void * data)
 #endif
 }
 
-static void shell_hexdump(struct termui_console_s *con, const uint8_t *data,
-                          size_t offset, size_t size, size_t dump_size)
-{
-  bool_t more = size > dump_size;
-  size_t left = 0;
-
-  if (more)
-    {
-      left = size - dump_size - offset;
-      size = dump_size;
-    }
-
-  while (size)
-    {
-      size_t s = __MIN(16, size);
-      termui_con_printf(con, "%p: %P\n", offset, data + offset, s);
-      size -= s;
-      offset += s;
-    }
-
-  if (more)
-    termui_con_printf(con, "... %u bytes not displayed.\n", left);
-}
-
 void shell_buffer_advertise(struct termui_console_s *con,
                             void *data, size_t size)
 {
@@ -418,18 +394,16 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_buffer_cmd_hexdump)
   if (!data)
     return -EINVAL;
 
-  size_t size = __MIN(bsize, 512);
+  size_t max_size = 512;
   if (used & BUFFER_OPT_SIZE)
-    size = c->size;
+    max_size = c->size;
 
-  if (c->offset > bsize)
-    size = 0;
-  else if (c->offset + size > bsize)
-    size = bsize - c->offset;
+  intptr_t offset = c->offset;
 
   if (!c->bufname.str)
     termui_con_printf(con, "Content of %s:\n", shell_buffer_name(data));
-  shell_hexdump(con, data, c->offset, bsize, size);
+  shell_hexdump(con, data + offset,
+                offset, bsize - offset, max_size);
 
   shell_buffer_drop(data);
   return 0;

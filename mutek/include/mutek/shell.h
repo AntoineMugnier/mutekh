@@ -262,5 +262,12 @@ struct mutek_shell_root_groups_s
 # define MUTEK_SHELL_ROOT_ENTRY(decl, ...)
 #endif
 
+/** @This output a memory dump. The address column is printed
+    according to @tt offset. The dump will be advertised as partial
+    when @tt size is greater that @tt dump_size. */
+config_depend(CONFIG_MUTEK_SHELL)
+void shell_hexdump(struct termui_console_s *con, const uint8_t *data,
+                   uintptr_t offset, size_t size, size_t dump_size);
+
 #endif
 
