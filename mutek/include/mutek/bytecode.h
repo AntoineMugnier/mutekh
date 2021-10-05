@@ -814,6 +814,10 @@ ALWAYS_INLINE void bc_set_mode(struct bc_context_s *ctx, uint_fast8_t mode)
   ctx->mode = mode & 63;
 }
 
+/** @This returns the instruction name from an opcode. */
+config_depend(CONFIG_MUTEK_BYTECODE_VM)
+const char * bc_opname(uint16_t op);
+
 /** @This dumps the virtual machine state. If the @ref
     #CONFIG_MUTEK_BYTECODE_DEBUG token is not defined, this
     function has no effect. */

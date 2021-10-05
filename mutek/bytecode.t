@@ -140,8 +140,8 @@ bc_init_sandbox(struct bc_context_s *ctx, const struct bc_descriptor_s *desc,
 }
 #endif
 
-#if defined(CONFIG_MUTEK_BYTECODE_VM) && defined(CONFIG_MUTEK_BYTECODE_DEBUG)
-static const char * bc_opname(uint16_t op)
+#if defined(CONFIG_MUTEK_BYTECODE_VM)
+const char * bc_opname(uint16_t op)
 {
   struct op_s
   {
