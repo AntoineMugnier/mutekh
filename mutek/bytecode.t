@@ -634,6 +634,28 @@ static void bc_run_packing(struct bc_context_s *ctx,
 # define BC_NATIVE_PTR_NA_LOAD(x) endian_64_na_load(x)
 #endif
 
+inline bool_t
+bc_test_bp(const struct bc_context_s *ctx, const void *pc)
+{
+#if CONFIG_MUTEK_BYTECODE_BREAKPOINTS > 0
+  uint16_t bp_mask = ctx->bp_mask;
+  uint_fast8_t i;
+  for (i = 0; bp_mask && i < CONFIG_MUTEK_BYTECODE_BREAKPOINTS; i++)
+    {
+      uint16_t m = 1 << i;
+      uintptr_t bp = ctx->bp_list[i];
+
+      if (bp_mask & m)
+        {
+          if ((uintptr_t)pc == bp)
+            return 1;
+          bp_mask ^= m;
+        }
+    }
+#endif
+  return 0;
+}
+
 /* backslash-region-begin */
 #define BC_VM_GEN(fcname, sandbox)
 __attribute__((noinline))
@@ -934,27 +956,14 @@ bc_opcode_t bc_run_##fcname(struct bc_context_s *ctx)
         }
 
   BC_CONFIG_BREAKPOINTS(
-      uint16_t bp_mask = ctx->bp_mask;
       uint16_t bp_skip = ctx->bp_skip;
       ctx->bp_skip = 0;
-      if (bp_mask && !bp_skip)
+      if (ctx->bp_mask && !bp_skip &&
+        bc_test_bp(ctx, pc))
         {
-          uint_fast8_t i;
-          for (i = 0; bp_mask && i < CONFIG_MUTEK_BYTECODE_BREAKPOINTS; i++)
-            {
-              uint16_t m = 1 << i;
-              uintptr_t bp = ctx->bp_list[i];
-              if (bp_mask & m)
-                {
-                  if ((uintptr_t)pc == bp)
-                    {
-                      ctx->bp_skip = 1;
-                      status = BC_RUN_STATUS_BREAK;
-                      goto ret;
-                    }
-                  bp_mask ^= m;
-                }
-            }
+          ctx->bp_skip = 1;
+          status = BC_RUN_STATUS_BREAK;
+          goto ret;
         }
   );
 

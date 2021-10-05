@@ -785,6 +785,11 @@ bc_enable_bps(struct bc_context_s *ctx, uint16_t mask)
 #endif
 }
 
+/** @This returns 1 if the provided address is an enabled
+    breakpoint */
+bool_t
+bc_test_bp(const struct bc_context_s *ctx, const void *pc);
+
 /** @This skip the next instruction. This can only be called if the
     execution has stopped on a conditional custom instruction.
 
