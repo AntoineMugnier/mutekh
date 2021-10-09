@@ -126,10 +126,18 @@ sub eval_expr
 
     our $num = qr/(?> (?:(?<![\w).'])[-+])? \b\d+\b)/xs;
 
-    my $bit = sub {
+    my $bitpos = sub {
         my $x = shift;
         error($loc, "bitpos() expects a power of 2.\n") if !$x or ($x & ($x - 1));
         return log2($x);
+    };
+
+    my $bits = sub {
+        my $e = 0;
+        foreach my $d (split(/\,/, shift)) {
+            $e |= 1 << int($d);
+        }
+        return $e;
     };
 
     $expr =~ s/\s+//g;
@@ -138,7 +146,8 @@ sub eval_expr
         next if ($expr =~ s/'(.)'/ord($1)/ge);
         next if ($expr =~ s/\b(\d+)[uUlL]+\b/$1/ge);
         next if ($expr =~ s/\b(0[Xx][a-fA-F0-9]+)\b/hex($1)/ge);
-	next if ($expr =~ s/\bbitpos\(($num)\)/$bit->($1)/ge);
+	next if ($expr =~ s/\bbits\(((?:\d+\,?)*)\)/$bits->($1)/ge);
+	next if ($expr =~ s/\bbitpos\(($num)\)/$bitpos->($1)/ge);
         next if ($expr =~ s/(?<!\w)\(([^()]+)\)/eval_expr($1,$loc)/ge);
 	next if ($expr =~ s/($num)\*($num)/int($1)*int($2)/ge);
 	next if ($expr =~ s/($num)\/($num)/int($2) ? int(int($1)\/int($2)) : 0/ge);
@@ -826,13 +835,32 @@ sub load_module
 
 my @custom;
 
+our $e_quoted = qr/ (?> \'(?:[^\'\\]|\\.)*\' | \"(?:[^\"\\]|\\.)*\" ) /xs;
+
+our $e_expr;
+our $e_subexpr; $e_subexpr = qr/ (?> \( (??{$e_expr}) \) |
+	         \[ (??{$e_expr}) \] | \{ (??{$e_expr}) \} ) /xs;
+
+$e_expr = qr/ (?> (??{$e_subexpr}) | (??{$e_quoted}) |
+                         (?> [^\'\"()\[\]\{\}]+ ) )* /xs;
+
+our $e_arg = qr/ (?> (??{$e_subexpr}) | (??{$e_quoted}) |
+                         (?> [^\'\"()\[\]\{\},]+ ) ) /xs;
+
 sub args_split
 {
-    return map {
-        s/^\s*|\s*$//g;
-        s/^"(.*)"$/$1/g;
-        $_
-    } split(/,/, shift);
+    my $l = shift;
+    my @args;
+
+    while ( $l =~ qr/^($e_arg+)(,?)/xs ) {
+        my $a = $1;
+        $l = $';
+        $a =~ s/^\s*|\s*$//g;
+#        $a =~ s/^"(.*)"$/$1/g;
+        push @args, $a;
+    }
+
+    return @args;
 }
 
 sub regs_mask_parse
