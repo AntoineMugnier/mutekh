@@ -161,7 +161,7 @@ fwd:
         call8   %2, call1
         die
 call1:
-        add8    %2, 4
+        add8    %2, 2
         laddr16 %3, call1
         laddr16r %4, call1
 #ifdef CONFIG_MUTEK_BYTECODE_VM
@@ -178,7 +178,7 @@ call1:
         die
         die
 call2:
-        add8    %2, 6
+        add8    %2, 4
 #ifdef CONFIG_MUTEK_BYTECODE_VM
         neq     %2, %3
          die
@@ -189,7 +189,7 @@ call2:
     // bwd CALL8, LADDR32
         jmp8 call3
 call4:
-        add8    %2, 4
+        add8    %2, 2
         jmp8 call5
 call3:
         nop
@@ -205,7 +205,7 @@ call5:
     // bwd CALL16R, bwd LADDR32R
         jmp8 call6
 call7:
-        add8    %2, 4
+        add8    %2, 2
         jmp8 call8
 call6:
         nop
