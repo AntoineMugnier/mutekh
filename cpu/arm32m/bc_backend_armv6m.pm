@@ -291,7 +291,7 @@ sub parse_pack {
     my $sym = $main::packops{$thisop->{name}};
 
     if ( !$sym ) {
-        $thisop->{nop} = 1;
+        $thisop->{flushin} = (1 << $thisop->{count}) - 1;
     } elsif ( $thisop->{count} > $max_op_regs ) {
         # use function call
         $thisop->{flushin} = (1 << $thisop->{count}) - 1;
@@ -308,7 +308,7 @@ sub parse_unpack {
     my $sym = $main::packops{$thisop->{name}};
 
     if ( !$sym ) {
-        $thisop->{nop} = 1;
+        $thisop->{reloadout} = (1 << $thisop->{count}) - 1;
     } elsif ( $thisop->{count} > $max_op_regs ) {
         # use function call
         $thisop->{reloadout} = (1 << $thisop->{count}) - 1;
