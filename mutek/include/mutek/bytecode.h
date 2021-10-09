@@ -621,18 +621,6 @@ uint_fast16_t bc_get_cycles(const struct bc_context_s *ctx),
   return ctx->max_cycles;
 });
 
-/** @This changes the program counter of a sandboxed virtual machine. */
-config_depend(CONFIG_MUTEK_BYTECODE_SANDBOX)
-error_t bc_set_sandbox_pc(struct bc_context_s *ctx, uint32_t pc);
-
-/** @This returns the program counter of a sandboxed virtual machine. */
-config_depend_alwaysinline(CONFIG_MUTEK_BYTECODE_SANDBOX,
-uint32_t bc_get_sandbox_pc(const struct bc_context_s *ctx),
-{
-  assert(ctx->sandbox);
-  return ctx->vpc - ctx->desc->code;
-});
-
 /** @This translates an address from the sandbox virtual machine
     address space to an usable pointer. This returns @tt NULL if the
     address range is not valid and contiguous inside the sandbox.
@@ -717,7 +705,7 @@ bc_set_reg(struct bc_context_s *ctx, uint_fast8_t i, uintptr_t value)
 ALWAYS_INLINE const void *
 bc_get_pc(const struct bc_context_s *ctx)
 {
-  return ctx->vpc;
+  return (void*)(ctx->pc & ~(uintptr_t)1);
 }
 
 /** @This changes the value of the virtual machine program counter in the
@@ -730,6 +718,18 @@ bc_set_pc(struct bc_context_s *ctx, const void *pc)
   ctx->bp_skip = 0;
 #endif
 }
+
+/** @This changes the program counter of a sandboxed virtual machine. */
+config_depend(CONFIG_MUTEK_BYTECODE_SANDBOX)
+error_t bc_set_sandbox_pc(struct bc_context_s *ctx, uint32_t pc);
+
+/** @This returns the program counter of a sandboxed virtual machine. */
+config_depend_alwaysinline(CONFIG_MUTEK_BYTECODE_SANDBOX,
+uint32_t bc_get_sandbox_pc(const struct bc_context_s *ctx),
+{
+  assert(ctx->sandbox);
+  return bc_get_pc(ctx) - ctx->desc->code;
+});
 
 /** @This function enables or disable the bytecode execution trace
     debug output. If the @ref #CONFIG_MUTEK_BYTECODE_TRACE token is
