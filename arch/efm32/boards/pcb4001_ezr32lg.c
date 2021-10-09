@@ -213,8 +213,8 @@ DEV_DECLARE_STATIC(usart1_dev, "usart1", 0, efm32_usart_dma_drv,
                    DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_PRS, 2),
 
                    DEV_STATIC_RES_DEV_PARAM("dma", "/dma"),
-                   DEV_STATIC_RES_DMA((1 << 2), (EFM32_DMA_SOURCE_USART1 | (EFM32_DMA_SIGNAL_USART1RXDATAV << 8))),
-                   DEV_STATIC_RES_DMA((1 << 3), (EFM32_DMA_SOURCE_USART1 | (EFM32_DMA_SIGNAL_USART1TXBL << 8))),
+                   DEV_STATIC_RES_DMA((1 << 2), (EFM32_DMA_SOURCE_USART1 | (EFM32_DMA_SIGNAL_USARTRXDATAV << 8))),
+                   DEV_STATIC_RES_DMA((1 << 3), (EFM32_DMA_SOURCE_USART1 | (EFM32_DMA_SIGNAL_USARTTXBL << 8))),
 
                    DEV_STATIC_RES_IRQ(0, EFM32_IRQ_USART1_TX, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
 
