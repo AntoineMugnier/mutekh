@@ -27,11 +27,11 @@
  * @short Interactive shell
  */
 
-#include <hexo/decls.h>
-#include <hexo/lock.h>
-
 #ifndef MUTEK_SHELL_H_
 #define MUTEK_SHELL_H_
+
+#include <hexo/decls.h>
+#include <hexo/lock.h>
 
 #ifdef CONFIG_MUTEK_SHELL
 # include <termui/console.h>
@@ -94,6 +94,7 @@ struct mutek_shell_context_s
     When the @ref #CONFIG_MUTEK_SHELL_BUFFER token is undefined,
     this is equivalent to calling @ref mem_alloc.
 */
+config_depend(CONFIG_MUTEK_SHELL)
 void * shell_buffer_new(const struct termui_console_s *con,
                         size_t size, const char *prefix,
                         const void *type, bool_t nocopy);
@@ -108,6 +109,7 @@ void * shell_buffer_new(const struct termui_console_s *con,
     When the @ref #CONFIG_MUTEK_SHELL_BUFFER token is undefined,
     this is equivalent to calling @ref mem_alloc.
 */
+config_depend(CONFIG_MUTEK_SHELL)
 void * shell_buffer_reuse(const struct termui_console_s *con,
                           size_t size, const char *prefix,
                           const void *type, bool_t nocopy);
@@ -119,6 +121,7 @@ void * shell_buffer_reuse(const struct termui_console_s *con,
     When the @ref #CONFIG_MUTEK_SHELL_BUFFER token is undefined,
     this is equivalent to calling @ref mem_free.
 */
+config_depend(CONFIG_MUTEK_SHELL)
 void shell_buffer_drop(void * data);
 
 /** @This can be used to advertise the availability of new data in a
@@ -126,6 +129,7 @@ void shell_buffer_drop(void * data);
     this show the name of the buffer. In the other case, it hexdumps
     the buffer content.
 */
+config_depend(CONFIG_MUTEK_SHELL)
 void shell_buffer_advertise(struct termui_console_s *con,
                             void *data, size_t size);
 
@@ -257,6 +261,13 @@ struct mutek_shell_root_groups_s
 # define MUTEK_SHELL_ROOT_GROUP(group, name)
 # define MUTEK_SHELL_ROOT_ENTRY(decl, ...)
 #endif
+
+/** @This output a memory dump. The address column is printed
+    according to @tt offset. The dump will be advertised as partial
+    when @tt size is greater that @tt dump_size. */
+config_depend(CONFIG_MUTEK_SHELL)
+void shell_hexdump(struct termui_console_s *con, const uint8_t *data,
+                   uintptr_t offset, size_t size, size_t dump_size);
 
 #endif
 

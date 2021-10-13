@@ -211,7 +211,7 @@ inline uint32_t fnv1a_32_update(uint32_t f, uint8_t x)
   return f;
 }
 
-inline uint64_t fnv1a_32(const void *data, size_t len)
+inline uint32_t fnv1a_32(const void *data, size_t len)
 {
   uint32_t f = FNV_32_INIT;
   const uint8_t *d = data;

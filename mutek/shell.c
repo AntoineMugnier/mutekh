@@ -33,6 +33,31 @@
 #include <termui/mutekh.h>
 #include <termui/console.h>
 
+void shell_hexdump(struct termui_console_s *con, const uint8_t *data,
+                   uintptr_t offset, size_t size, size_t dump_size)
+{
+  bool_t more = size > dump_size;
+  size_t left = 0;
+
+  if (more)
+    {
+      left = size - dump_size;
+      size = dump_size;
+    }
+
+  while (size)
+    {
+      size_t s = __MIN(16, size);
+      termui_con_printf(con, "%p: %P\n", offset, data, s);
+      size -= s;
+      offset += s;
+      data += s;
+    }
+
+  if (more)
+    termui_con_printf(con, "... %u bytes not displayed.\n", left);
+}
+
 static void shell_context_init(struct mutek_shell_context_s *sctx)
 {
   lock_init(&sctx->lock);
