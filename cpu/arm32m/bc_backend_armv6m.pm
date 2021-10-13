@@ -211,6 +211,34 @@ sub out_call {
            "2:\n";
 }
 
+sub parse_pick {
+    my ($thisop) = @_;
+    $thisop->{clobber} = $caller_saved;
+}
+
+sub out_pick {
+    my ($thisop, @w) = @_;
+
+    return "    mov r0, r4\n".
+           "    adds r0, #".($thisop->{packout_reg} * 4)."\n".
+           "    movs r1, #".($thisop->{args}->[1])."\n".
+           "    bl bc_pick\n";
+}
+
+sub parse_place {
+    my ($thisop) = @_;
+    $thisop->{clobber} = $caller_saved;
+}
+
+sub out_place {
+    my ($thisop, @w) = @_;
+
+    return "    mov r0, r4\n".
+           "    adds r0, #".($thisop->{packout_reg} * 4)."\n".
+           "    movs r1, #".($thisop->{args}->[1])."\n".
+           "    bl bc_place\n";
+}
+
 sub out_pack {
     my ($thisop, @w) = @_;
 

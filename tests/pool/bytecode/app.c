@@ -12,6 +12,7 @@
 #define BC_CUSTOM_SKIPODD 0x3000
 #define BC_CUSTOM_LOADSTR 0x4000
 #define BC_CUSTOM_CHECKSTR 0x5000
+#define BC_CUSTOM_PRINTH 0x6000
 
 uint32_t cksum = 5381;
 
@@ -23,7 +24,7 @@ static void cksum_update(uint32_t x)
 #ifndef CONFIG_MUTEK_BYTECODE_SANDBOX
 static BC_CCALL_FUNCTION(c_func)
 {
-  assert(ctx->mode == 43);
+  assert(ctx->mode == 4);
   bc_reg_t r = bc_get_reg(ctx, 2);
   cksum_update(r);
   bc_set_reg(ctx, 2, r * 13);
@@ -61,7 +62,7 @@ void app_start()
 
       if (!r)
         {
-          assert(vm.mode == 23);
+          assert(vm.mode == 2);
           printk("++SUCCESS++%08x++\n", cksum);
           break;
         }
@@ -120,6 +121,14 @@ void app_start()
                 goto done;
               }
           break;
+        case BC_CUSTOM_PRINTH: {
+          uint8_t *t = (uint8_t*)(vm.v + (r & 0xf));
+          uint_fast8_t c = (r & 0x3f0) >> 4;
+          printk("%P\n", t, c);
+          while (c--)
+            cksum_update(*t++);
+          break;
+        }
         }
         default:
           printk("bad custom bytecode opcode\n");

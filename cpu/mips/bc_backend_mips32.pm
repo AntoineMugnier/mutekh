@@ -193,6 +193,32 @@ sub out_jmp {
     return out_ret( @_ );
 }
 
+sub parse_pick {
+    my ($thisop) = @_;
+    $thisop->{clobber} = $caller_saved;
+}
+
+sub out_pick {
+    my ($thisop, @w) = @_;
+
+    return "    addiu \$a0, \$17, ".($thisop->{packout_reg} * 4)."\n".
+           "    li \$a1, ".($thisop->{args}->[1])."\n".
+           "    jal bc_pick\n";
+}
+
+sub parse_place {
+    my ($thisop) = @_;
+    $thisop->{clobber} = $caller_saved;
+}
+
+sub out_place {
+    my ($thisop, @w) = @_;
+
+    return "    addiu \$a0, \$17, ".($thisop->{packout_reg} * 4)."\n".
+           "    li \$a1, ".($thisop->{args}->[1])."\n".
+           "    jal bc_place\n";
+}
+
 sub out_pack {
     my ($thisop, @wi) = @_;
 

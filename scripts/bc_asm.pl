@@ -557,7 +557,7 @@ sub parse_exts
 sub parse_mode
 {
     my $thisop = shift;
-    check_num($thisop, 0, 0, 63);
+    check_num($thisop, 0, 0, 15);
 }
 
 sub parse_tst
@@ -706,6 +706,50 @@ sub parse_pack8
     my $thisop = shift;
     parse_pack($thisop);
     $thisop->{packout_bytes} = $thisop->{count};
+}
+
+sub msbs_popc
+{
+    my $x = shift;
+
+    my ( $popc, $msbs ) = ( 0, 0 );
+    while ( $x ) {
+        $msbs++;
+        $popc += ($x & 1);
+        $x >>= 1;
+    }
+
+    return ( $popc, $msbs );
+}
+
+sub parse_pick
+{
+    my $thisop = shift;
+
+    my $r = check_reg($thisop, 0);
+    $thisop->{packin_reg} = $r;
+    $thisop->{packout_reg} = $r;
+
+    my $mask = check_num($thisop, 1, 1, 0xfffe);
+    my ( $popc, $msbs ) = msbs_popc( $mask );
+
+    $thisop->{packin_bytes} = $msbs;
+    $thisop->{packout_bytes} = $msbs;
+}
+
+sub parse_place
+{
+    my $thisop = shift;
+
+    my $r = check_reg($thisop, 0);
+    $thisop->{packin_reg} = $r;
+    $thisop->{packout_reg} = $r;
+
+    my $mask = check_num($thisop, 1, 1, 0xffff);
+    my ( $popc, $msbs ) = msbs_popc( $mask );
+
+    $thisop->{packin_bytes} = $popc;
+    $thisop->{packout_bytes} = $msbs;
 }
 
 sub parse_pack1632
@@ -1013,7 +1057,7 @@ sub parse
         if ($l =~ /^\s*\.mode\s+(.*?)\s*$/) {
             error($loc, ".mode not inside a function\n") if !defined $func;
             my $e = eval_expr( $1, $loc );
-            error($loc, "bad mode expression `$1'\n") if (!defined $e || $e >= 64);
+            error($loc, "bad mode expression `$1'\n") if (!defined $e || $e >= 16);
             $func->{mode} = $e;
             next;
         }
@@ -1223,6 +1267,14 @@ our %asm = (
         words => 1, code => 0x3800, argscnt => 1,
         parse => \&parse_alu1, backend => ('swap'),
     }),
+    'pick' => {
+        words => 2, code => 0x7400, argscnt => 2,
+        parse => \&parse_pick, backend => ('pick'),
+    },
+    'place' => {
+        words => 2, code => 0x7410, argscnt => 2,
+        parse => \&parse_place, backend => ('place'),
+    },
     'eq'  => {
         words => 1, code => 0x4000, argscnt => 2,
         parse => \&parse_eq, backend => ('eq'),
@@ -1427,7 +1479,7 @@ our %asm = (
     'gaddr' => {
         words => 1 + (4 << $backend_width) / 8, code => 0x7000, argscnt => 2,
         parse => \&parse_gaddr, backend => ('gaddr'),
-        nocond => 1
+        nocond => 1  # because of variable size
     },
     _multi_keys( 'data8' => 'data16' => 'data16le' => 'data16be' =>
                  'data32' => 'data32le' => 'data32be' => {
@@ -2026,7 +2078,7 @@ sub check_regs
      use constant REGVAL_PACK =>  15;
      use constant REGVAL_UNDEF => 16;
      use constant REGVAL_VALUE => 32;
-     use constant MODE_UNDEF => 64;
+     use constant MODE_UNDEF => 16;
 
      my @entries;
      my %entries_done;
@@ -2191,7 +2243,7 @@ sub check_regs
              # check function return
              if ( ( $func && $op->{op_ret} ) || $tailcall ) {
                  if ( defined $func->{mode} ) {
-                     if ( $mode == 64 ) {
+                     if ( $mode == MODE_UNDEF ) {
                          warning($thisop, "function returns with undefined mode instead of $func->{mode}\n")
                      } elsif ( $func->{mode} != $mode ) {
                          warning($thisop, "function returns with mode $mode instead of $func->{mode}\n")
