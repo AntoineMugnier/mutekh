@@ -208,6 +208,17 @@ sub out_swap {
     return fmt4( $thisop, 0, $packops{$thisop->{name}}, $thisop->{in}->[0] );
 }
 
+sub out_pick {
+    my ($thisop) = @_;
+    my $r = $thisop->{packin_reg};
+    return $word->( $thisop->{op}->{code} | ($r & 0xf)).
+        $word->( $thisop->{args}->[1] );
+}
+
+sub out_place {
+    return out_pick( shift );
+}
+
 sub out_eq {
     my ($thisop) = @_;
     return fmt1( $thisop, $thisop->{in}->[0], $thisop->{in}->[1] );

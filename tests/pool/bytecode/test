@@ -27,7 +27,7 @@ env_list = [
 Environment(
     name = "bytecode1",
     timeout = 30,
-    success_grep = "++SUCCESS++eda59108++",
+    success_grep = "++SUCCESS++d6af7240++",
     test_deps = deps,
 
     test_space = [

@@ -211,6 +211,34 @@ sub out_call {
            "2:\n";
 }
 
+sub parse_pick {
+    my ($thisop) = @_;
+    $thisop->{clobber} = $caller_saved;
+}
+
+sub out_pick {
+    my ($thisop, @w) = @_;
+
+    return "    mov r0, r4\n".
+           "    adds r0, #".($thisop->{packout_reg} * 4)."\n".
+           "    movs r1, #".($thisop->{args}->[1])."\n".
+           "    bl bc_pick\n";
+}
+
+sub parse_place {
+    my ($thisop) = @_;
+    $thisop->{clobber} = $caller_saved;
+}
+
+sub out_place {
+    my ($thisop, @w) = @_;
+
+    return "    mov r0, r4\n".
+           "    adds r0, #".($thisop->{packout_reg} * 4)."\n".
+           "    movs r1, #".($thisop->{args}->[1])."\n".
+           "    bl bc_place\n";
+}
+
 sub out_pack {
     my ($thisop, @w) = @_;
 
@@ -291,7 +319,7 @@ sub parse_pack {
     my $sym = $main::packops{$thisop->{name}};
 
     if ( !$sym ) {
-        $thisop->{nop} = 1;
+        $thisop->{flushin} = (1 << $thisop->{count}) - 1;
     } elsif ( $thisop->{count} > $max_op_regs ) {
         # use function call
         $thisop->{flushin} = (1 << $thisop->{count}) - 1;
@@ -308,7 +336,7 @@ sub parse_unpack {
     my $sym = $main::packops{$thisop->{name}};
 
     if ( !$sym ) {
-        $thisop->{nop} = 1;
+        $thisop->{reloadout} = (1 << $thisop->{count}) - 1;
     } elsif ( $thisop->{count} > $max_op_regs ) {
         # use function call
         $thisop->{reloadout} = (1 << $thisop->{count}) - 1;

@@ -22,6 +22,7 @@
 #define MUTEK_BYTECODE_H_
 
 #include <hexo/types.h>
+#include <hexo/decls.h>
 #include <stdarg.h>
 #include <assert.h>
 #include <inttypes.h>
@@ -327,7 +328,7 @@
      @item @tt{laddr[16,32]r reg, label} @item Set a register to the pc relative address of a bytecode label.
      @item @tt{gaddr reg, label} @item Set a register to the address of a
      global symbol. Bytecode in compiled form will not be portable.
-     @item @tt{mode m} @item Select custom bytecode interpretation mode in range [0, 63].
+     @item @tt{mode m} @item Select custom bytecode interpretation mode in range [0, 15].
    @end table
 
    Some instructions are provided to handle packing of some register values
@@ -451,8 +452,11 @@
     @item ld[8,16,32,64]e     @item r, ra, +/-v   @item @tt{0111 ss01 aaaa rrrr, v} @item  3
     @item st[8,16,32,64]e     @item r, ra, +/-v   @item @tt{0111 ss11 aaaa rrrr, v} @item  3
 
-    @item mode                @item m             @item @tt{0111 mm00 0001 mmmm} @item  3
-    @item gaddr               @item r, lbl        @item @tt{0111 --00 0000 rrrr, v?} @item  3
+    @item gaddr               @item r, lbl        @item @tt{0111 0000 0000 rrrr, v?} @item  3
+    @item mode                @item mode          @item @tt{0111 0000 0001 mmmm} @item  3
+    @item pick                @item r, mask       @item @tt{0111 0100 0000 mmmm, v} m != 0 @item  3
+    @item place               @item r, mask       @item @tt{0111 0100 0001 mmmm, v} m != 0 @item  3
+@c  @item ---                 @item               @item @tt{0111 1-00 000- ----} @item  3
     @item cst[16,32]          @item r, v, b       @item @tt{0111 xs00 1bbb rrrr, v, v?} @item  3
     @item laddr[16,32][r]     @item r, lbl        @item @tt{0111 Rs00 0x1- rrrr, v, v?} @item  3
     @item jmp[16,32][r]       @item lbl           @item @tt{0111 Rs00 0100 rrrr, v, v?} @item  3
@@ -570,6 +574,8 @@ struct bc_context_s
 #endif
 };
 
+FIRST_FIELD_ASSERT(bc_context_s, v); /* used in asm backends */
+
 /** @This initializes the virtual machine. The initial value of the
     registers is undefined. */
 void
@@ -619,18 +625,6 @@ uint_fast16_t bc_get_cycles(const struct bc_context_s *ctx),
 {
   assert(ctx->sandbox);
   return ctx->max_cycles;
-});
-
-/** @This changes the program counter of a sandboxed virtual machine. */
-config_depend(CONFIG_MUTEK_BYTECODE_SANDBOX)
-error_t bc_set_sandbox_pc(struct bc_context_s *ctx, uint32_t pc);
-
-/** @This returns the program counter of a sandboxed virtual machine. */
-config_depend_alwaysinline(CONFIG_MUTEK_BYTECODE_SANDBOX,
-uint32_t bc_get_sandbox_pc(const struct bc_context_s *ctx),
-{
-  assert(ctx->sandbox);
-  return ctx->vpc - ctx->desc->code;
 });
 
 /** @This translates an address from the sandbox virtual machine
@@ -717,7 +711,7 @@ bc_set_reg(struct bc_context_s *ctx, uint_fast8_t i, uintptr_t value)
 ALWAYS_INLINE const void *
 bc_get_pc(const struct bc_context_s *ctx)
 {
-  return ctx->vpc;
+  return (void*)(ctx->pc & ~(uintptr_t)1);
 }
 
 /** @This changes the value of the virtual machine program counter in the
@@ -730,6 +724,18 @@ bc_set_pc(struct bc_context_s *ctx, const void *pc)
   ctx->bp_skip = 0;
 #endif
 }
+
+/** @This changes the program counter of a sandboxed virtual machine. */
+config_depend(CONFIG_MUTEK_BYTECODE_SANDBOX)
+error_t bc_set_sandbox_pc(struct bc_context_s *ctx, uint32_t pc);
+
+/** @This returns the program counter of a sandboxed virtual machine. */
+config_depend_alwaysinline(CONFIG_MUTEK_BYTECODE_SANDBOX,
+uint32_t bc_get_sandbox_pc(const struct bc_context_s *ctx),
+{
+  assert(ctx->sandbox);
+  return bc_get_pc(ctx) - ctx->desc->code;
+});
 
 /** @This function enables or disable the bytecode execution trace
     debug output. If the @ref #CONFIG_MUTEK_BYTECODE_TRACE token is
@@ -816,7 +822,7 @@ ALWAYS_INLINE uint_fast8_t bc_get_mode(const struct bc_context_s *ctx)
 /** @This sets the current bytecode execution mode */
 ALWAYS_INLINE void bc_set_mode(struct bc_context_s *ctx, uint_fast8_t mode)
 {
-  ctx->mode = mode & 63;
+  ctx->mode = mode & 15;
 }
 
 /** @This returns the instruction name from an opcode. */

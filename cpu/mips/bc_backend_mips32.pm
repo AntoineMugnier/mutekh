@@ -193,6 +193,32 @@ sub out_jmp {
     return out_ret( @_ );
 }
 
+sub parse_pick {
+    my ($thisop) = @_;
+    $thisop->{clobber} = $caller_saved;
+}
+
+sub out_pick {
+    my ($thisop, @w) = @_;
+
+    return "    addiu \$a0, \$17, ".($thisop->{packout_reg} * 4)."\n".
+           "    li \$a1, ".($thisop->{args}->[1])."\n".
+           "    jal bc_pick\n";
+}
+
+sub parse_place {
+    my ($thisop) = @_;
+    $thisop->{clobber} = $caller_saved;
+}
+
+sub out_place {
+    my ($thisop, @w) = @_;
+
+    return "    addiu \$a0, \$17, ".($thisop->{packout_reg} * 4)."\n".
+           "    li \$a1, ".($thisop->{args}->[1])."\n".
+           "    jal bc_place\n";
+}
+
 sub out_pack {
     my ($thisop, @wi) = @_;
 
@@ -249,7 +275,7 @@ sub parse_pack {
     my $sym = $main::packops{$thisop->{name}};
 
     if ( !$sym ) {
-        $thisop->{nop} = 1;
+        $thisop->{flushin} = (1 << $thisop->{count}) - 1;
     } elsif ( $thisop->{count} > $max_op_regs || $sym =~ /swap/ ) {
         # use function call
         $thisop->{flushin} = (1 << $thisop->{count}) - 1;
@@ -266,7 +292,7 @@ sub parse_unpack {
     my $sym = $main::packops{$thisop->{name}};
 
     if ( !$sym ) {
-        $thisop->{nop} = 1;
+        $thisop->{reloadout} = (1 << $thisop->{count}) - 1;
     } elsif ( $thisop->{count} > $max_op_regs || $sym =~ /swap/ ) {
         # use function call
         $thisop->{reloadout} = (1 << $thisop->{count}) - 1;

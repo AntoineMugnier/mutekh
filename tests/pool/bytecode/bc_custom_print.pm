@@ -40,6 +40,7 @@ main::custom_op('prints', 1, 0x2000, \&parse_1reg );
 main::custom_cond_op('skipodd', 1, 0x3000, \&parse_1reg );
 main::custom_op('loadstr', 2, 0x4000, \&parse_loadstr );
 main::custom_op('checkstr', 2, 0x5000, \&parse_checkstr );
+main::custom_op('printh', 2, 0x6000, \&parse_checkstr );
 
 return 1;
 

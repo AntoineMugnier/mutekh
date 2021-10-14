@@ -17,7 +17,7 @@ test_bytecode_entry:
 	.entry %1
 
         // enable vm debug traces
-        // trace	1, 1
+        // trace	7
 
         cst8	%3, 143
         cst8	%2, 141
@@ -63,7 +63,7 @@ test_bytecode_entry:
         neq	%3, %2
          die
 
-        mode 43
+        mode 4
 
 #ifndef CONFIG_MUTEK_BYTECODE_SANDBOX
     // CST8, CCALL, NEQ
@@ -161,7 +161,7 @@ fwd:
         call8   %2, call1
         die
 call1:
-        add8    %2, 4
+        add8    %2, 2
         laddr16 %3, call1
         laddr16r %4, call1
 #ifdef CONFIG_MUTEK_BYTECODE_VM
@@ -178,7 +178,7 @@ call1:
         die
         die
 call2:
-        add8    %2, 6
+        add8    %2, 4
 #ifdef CONFIG_MUTEK_BYTECODE_VM
         neq     %2, %3
          die
@@ -189,7 +189,7 @@ call2:
     // bwd CALL8, LADDR32
         jmp8 call3
 call4:
-        add8    %2, 4
+        add8    %2, 2
         jmp8 call5
 call3:
         nop
@@ -205,7 +205,7 @@ call5:
     // bwd CALL16R, bwd LADDR32R
         jmp8 call6
 call7:
-        add8    %2, 4
+        add8    %2, 2
         jmp8 call8
 call6:
         nop
@@ -822,6 +822,18 @@ next12:
 	neq	%1, %2
 	die
 
+	cst32   %1, 0x03020100, 0
+	cst32   %2, 0x07060504, 0
+	cst32   %3, 0x0b0a0908, 0
+	cst32   %4, 0x0f0e0d0c, 0
+	pack32le %1, 4, 16
+
+        pick %1, bits( 0, 2, 4, 7 )
+        printh  %1, 16
+
+        place %1, bits( 1, 3, 5, 6, 8 )
+        printh  %1, 16
+
     // hello world using the custom prints instruction
         mov	%2, %buf
         mov	%1, %buf
@@ -850,7 +862,7 @@ next12:
         neq	%fact:result, %3
         die
 
-        mode 23
+        mode 2
         end
 
 .func wrap
@@ -869,7 +881,7 @@ next12:
 	.output %1 result
 	.clobber %2 tmp
 	.preserve %10, %13
-        .mode 43
+        .mode 4
 
         std	%link, %sp
         cst8	%tmp, 1

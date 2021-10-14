@@ -193,8 +193,10 @@ const char * bc_opname(uint16_t op)
     { 0xf300, 0x6100, "ldi" },
     { 0xf300, 0x6100, "st" },
     { 0xf300, 0x6300, "sti" },
-    { 0xf3f0, 0x7010, "mode" },
-    { 0xf3f0, 0x7000, "gaddr" },
+    { 0xfff0, 0x7010, "mode" },
+    { 0xfff0, 0x7000, "gaddr" },
+    { 0xfff0, 0x7400, "pick" },
+    { 0xfff0, 0x7410, "place" },
     { 0xf380, 0x7080, "cst" },
     { 0xf3a0, 0x7020, "laddr" },
     { 0xf3f0, 0x7040, "jmp" },
@@ -446,6 +448,43 @@ bc_swap_op32(struct bc_context_s *ctx, reg_t op)
 }
 
 #endif
+
+/* Select the bytes that have a corresponding bit set in the mask and
+   move them to the begining of the array. Other bytes are moved to
+   the end of the array. */
+extern inline
+void bc_pick(void *b_, uint16_t x)
+{
+  uint8_t *b = b_;
+  uint8_t out[16];
+  uint_fast8_t i = 0, j = 0, k = bit_popc16(x);
+  while (x)
+    {
+      out[x & 1 ? j++ : k++] = b[i++];
+      x >>= 1;
+    }
+  memcpy(b, out, k);
+}
+
+/* Move contiguous bytes that are in the packed byte array to the
+   locations corresponding to the bits set in the mask. Bytes
+   corresponding to the cleared bits in the mask are set to 0. */
+extern inline
+void bc_place(void *b_, uint16_t x)
+{
+  uint8_t *b = b_;
+  uint_fast8_t l = bit_clz16(x);
+  uint_fast8_t j = 16 - l;
+  uint_fast8_t i = bit_popc16(x);
+
+  for (x <<= l; j--; x <<= 1)
+    {
+      if (x & 0x8000)
+	b[j] = b[--i];
+      else
+	b[j] = 0;
+    }
+}
 
 #ifdef CONFIG_MUTEK_BYTECODE_VM
 
@@ -933,18 +972,22 @@ bc_opcode_t bc_run_##fcname(struct bc_context_s *ctx)
       uint_fast8_t cst_len = 0;
       if ((op & 0xf000) == 0x7000)
         {
-          uint_fast8_t s = (op >> 5) & 31;
+          static const uint8_t cl[32] = {
+            0x54, 0x55, 0x55, 0x55, 0x00, 0x00, 0x55, 0x55,
+            0xa9, 0xaa, 0x55, 0x55, 0x00, 0x00, 0x55, 0x55,
+            0x54, 0x55, 0x55, 0x55, 0x00, 0x00, 0x55, 0x55,
+            0xa8, 0xaa, 0x55, 0x55, 0x00, 0x00, 0x55, 0x55
+          };
 
-          if ((0xff00fffe >> s) & 1)
-            {
-              cst_len = 1 + ((op & 0x0700) == 0x0400);
+          /* op: 0111 bbbb baa- ---- */
+          cst_len = (cl[/* b */(op >> 7) & 0b11111]
+                    >> /* a */((op >> 4) & 0b110)) & 3;
 
-              BC_CONFIG_SANDBOX(
-                /* check upper bound again with extra words */
-                if (sandbox && pc + 1 + cst_len > code_end)
-                  goto err_pc;
-              );
-            }
+          BC_CONFIG_SANDBOX(
+            /* check upper bound again with extra words */
+            if (sandbox && pc + 1 + cst_len > code_end)
+              goto err_pc;
+          );
         }
 
       if (skip)
@@ -1007,7 +1050,7 @@ bc_opcode_t bc_run_##fcname(struct bc_context_s *ctx)
 	  BC_DISPATCH(alu),
           BC_DISPATCH(fmt2),
 	  BC_DISPATCH(ldst),
-          BC_DISPATCH(cstn_call),
+          BC_DISPATCH(fmt3),
 	};
 	BC_DISPATCH_GOTO((op >> 12) & 0x7);
 
@@ -1076,7 +1119,7 @@ bc_opcode_t bc_run_##fcname(struct bc_context_s *ctx)
               uint_fast8_t r = (op & 0xf);
               BC_CONFIG_SANDBOX(
                 if (sandbox && r + c > 16)
-                  break;
+                  goto err_ret;
               );
               assert(r + c <= 16);
               bc_run_packing(ctx, c, r, (op >> 4) & 0xf);
@@ -1137,26 +1180,48 @@ bc_opcode_t bc_run_##fcname(struct bc_context_s *ctx)
 	  break;
 	}
 
-      dispatch_cstn_call: {
-	  if ((op & 0x0300) == 0x0000) /* not ld/st */
-	    {
-              if ((op & 0x00e0) == 0x0000)
-                {
-                  if (op & 0x0010) /* mode */
-                    {
-                      ctx->mode = ((op & 0x0c00) >> 6) | (op & 15);
-                    }
-                  else /* gaddr */
-                    {
-                      BC_CONFIG_SANDBOX(
-                        if (sandbox)
-                          goto err_ret;
+      dispatch_fmt3:
+	  if (op & 0x0300) /* ld/st */
+            goto dispatch_ldst;
+
+          switch (op & 0x0ce0)
+            {
+              case 0x0000:
+                if (op & 0x0010)    /* mode */
+                  {
+                    ctx->mode = op & 15;
+                  }
+                else    /* gaddr */
+                  {
+                    BC_CONFIG_SANDBOX(
+                      if (sandbox)
+                        goto err_ret;
                       );
-                      *dstp = BC_NATIVE_PTR_NA_LOAD(++pc);
-                      pc += INT_PTR_SIZE / 16 - 1;
-                    }
-                  break;
-                }
+                    *dstp = BC_NATIVE_PTR_NA_LOAD(++pc);
+                    pc += INT_PTR_SIZE / 16 - 1;
+                  }
+                break;
+
+              case 0x0400: {    /* pick/place */
+                uint16_t mask = endian_le16(*++pc);
+                uint_fast8_t r = (op & 0xf);
+                BC_CONFIG_SANDBOX(
+                  if (sandbox)
+                    if (!mask || r * 4 + bit_msb_index(mask) > 63)
+                      goto err_ret;
+                );
+                if (op & 0x0010)
+                  bc_place(ctx->v + r, mask);
+                else
+                  bc_pick(ctx->v + r, mask);
+                break;
+              }
+
+              case 0x0800:    /* unused */
+              case 0x0c00:
+                goto err_ret;
+
+              default: {      /* cst/laddr/jmp/call */
 
               uintptr_t rpc = (void*)pc - desc->code;
 
@@ -1206,8 +1271,9 @@ bc_opcode_t bc_run_##fcname(struct bc_context_s *ctx)
 
               pc = (const uint16_t*)(desc->code + x);
               goto check_pc;
-	    }
-        }
+              }
+            }
+          break;
 
       dispatch_ldst:
 	if (bc_run_##fcname##_ldst(desc, ctx, pc + 1, op))
