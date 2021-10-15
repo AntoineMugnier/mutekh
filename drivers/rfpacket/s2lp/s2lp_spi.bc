@@ -353,7 +353,7 @@
         call16                 %s2lp_get_curr_rssi:link, s2lp_get_curr_rssi
         // Update rssi average
         ld32e                  %avg,            %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, avg_rssi, 4)
-        cst32                  %tmp,            S2LP_RSSI_AVG_WEIGHT,  0
+        cst8                   %tmp,            S2LP_RSSI_AVG_WEIGHT
         mul32                  %avg,            %tmp
         add                    %avg,            %s2lp_get_curr_rssi:rssi
         shi32r                 %avg,            S2LP_RSSI_AVG_SHIFT
@@ -454,7 +454,7 @@
         .input %2 state
         .clobber %1, %2, %3 tmp, %4
          // Check state
-        cst32                  %tmp,                  S2LP_STATE0_STATE_REGMASK,  0
+        cst8                   %tmp,                  S2LP_STATE0_STATE_REGMASK
         and32                  %tmp,                  %S2LP_STATUS
         neq                    %tmp,                  %state
             jmp16              s2lp_error
@@ -961,7 +961,7 @@
         shi32r                 %S2LP_STATUS,     16
     abort_check_status:
         // Check status
-        cst32                  %state,           S2LP_STATE0_STATE_REGMASK,   0
+        cst8                   %state,           S2LP_STATE0_STATE_REGMASK
         and32                  %state,           %S2LP_STATUS
         cst8                   %tmp,             S2LP_STATE0_STATE_OFFSET(S2LP_STATE_READY)
         eq                     %state,           %tmp
@@ -990,7 +990,7 @@
         pack16le               %cmd,             1,        2
         spi_wr                 %cmd,             2,        CS_PULSE
         // Wait for rco to finish
-        cst16                  %state,           S2LP_STATE0_STATE_OFFSET(S2LP_STATE_RX), 0
+        cst8                   %state,           S2LP_STATE0_STATE_OFFSET(S2LP_STATE_RX)
         ld32e                  %delay,           %S2LP_CTX_PV,   _offsetof(s2lp_ctx_s, bt, 4)
         //shi32l                 %delay,           S2LP_ABORT_LDC_SHIFT
     abort_wait_ready:
@@ -1004,7 +1004,7 @@
         mov                    %S2LP_STATUS,   %cmd
         shi32r                 %S2LP_STATUS,   16
         // Check state
-        cst32                  %tmp,           S2LP_STATE0_STATE_REGMASK, 0
+        cst8                   %tmp,           S2LP_STATE0_STATE_REGMASK
         and32                  %tmp,           %S2LP_STATUS
         eq                     %tmp,           %state
             jmp8               abort_wait_ready
