@@ -37,6 +37,7 @@
 #define WAIT_PERIOD_MS 250
 #define RX_TIME_MS 100
 #define MASTER_MS_TICK_NB 32
+#define TX_POWER 0
 
 // Commands
 #define NEXT_CMD 'n'
@@ -232,11 +233,11 @@ static void test_rflbt_rx_cont(void)
     DEVICE_OP(&pv.rf_dev, request, rq, NULL);
 }
 
-static void test_rflbt_cancel_rx_cont(void)
-{
-    struct dev_rfpacket_rq_s *rq = &pv.rq_cont;
-    DEVICE_OP(&pv.rf_dev, cancel, rq);
-}
+// static void test_rflbt_cancel_rx_cont(void)
+// {
+//     struct dev_rfpacket_rq_s *rq = &pv.rq_cont;
+//     DEVICE_OP(&pv.rf_dev, cancel, rq);
+// }
 
 static void test_rflbt_process_rx(uint8_t *pBuff)
 {
@@ -289,7 +290,7 @@ static void test_rflbt_send_ack(bool islbt)
     rq->tx_size = sizeof(pv.tx_buf);
     rq->tx_buf = pv.tx_buf;
     //printk("Sending ack\n");
-    rq->tx_pwr = 64;
+    rq->tx_pwr = TX_POWER;
     dev_rfpacket_rq_init(rq, &test_rflbt_tx_cb);
     DEVICE_OP(&pv.rf_dev, request, rq, NULL);
 }
@@ -309,7 +310,7 @@ static void test_rflbt_send_td(void)
 
     rq->tx_size = sizeof(pv.tx_buf);
     rq->tx_buf = pv.tx_buf;
-    rq->tx_pwr = 64;
+    rq->tx_pwr = TX_POWER;
     dev_rfpacket_rq_init(rq, &test_rflbt_tx_cb);
     DEVICE_OP(&pv.rf_dev, request, rq, NULL);
 }

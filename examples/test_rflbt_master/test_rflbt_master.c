@@ -46,6 +46,7 @@
 #define RX_TIME_MS 25 // Maximum waiting time for slave test response and time between test packets
 #define DISTURB_DEADLINE_MS 0 // Waiting time before sending disturb packet
 #define TD_MS_TICK_NB 32 // Value to divide td to get ms
+#define TX_POWER 0
 
 // Commands
 #define NEXT_CMD 'n'
@@ -275,7 +276,7 @@ static KROUTINE_EXEC(test_rflbt_rx_pckt_cb)
 
             if (pv.state == STATE_SYNC)
             {
-                pv.state = STATE_TEST_LBT_CLR; // STATE_TEST_ACK;
+                pv.state = STATE_TEST_ACK;
                 pv.test_counter = TEST_LOOP_NB;
             }
             //printk("Received ack.\n");
@@ -396,10 +397,10 @@ static void test_rflbt_wait(uint32_t wait_time)
 static void test_rflbt_button(void)
 {
     struct dev_gpio_rq_s *grq = &pv.grq_struct;
-    //grq->io_first = EFM32_PF6;
-    //grq->io_last = EFM32_PF6;
-    grq->io_first = EFM32_PB10;
-    grq->io_last = EFM32_PB10;
+    grq->io_first = EFM32_PF6;
+    grq->io_last = EFM32_PF6;
+    // grq->io_first = EFM32_PB10;
+    // grq->io_last = EFM32_PB10;
     grq->type = DEV_GPIO_UNTIL;
     grq->until.mask = dev_gpio_mask1;
     pv.gpio_data[0] = 0x1;
@@ -434,7 +435,7 @@ static void test_rflbt_disturb(uint32_t dl, uint16_t size)
     // Set data and size
     rq->tx_size = size;
     rq->tx_buf = pv.dist_buf;
-    rq->tx_pwr = 64;
+    rq->tx_pwr = TX_POWER;
     dev_rfpacket_rq_init(rq, &test_rflbt_dist_cb);
     DEVICE_OP(&pv.rf_dev, request, rq, NULL);
 }
@@ -450,7 +451,7 @@ static void test_rflbt_send(uint8_t *pBuf, uint32_t buf_size)
     rq->tx_size = buf_size;
     rq->tx_buf = pBuf;
     //printk("Sending next command\n");
-    rq->tx_pwr = 64;
+    rq->tx_pwr = TX_POWER;
     dev_rfpacket_rq_init(rq, &test_rflbt_tx_cb);
     DEVICE_OP(&pv.rf_dev, request, rq, NULL);
 }
@@ -611,7 +612,8 @@ static void test_rflbt_process(void)
             {
                 printk("Error: Couldn't contact slave !\n");
                 test_rflbt_end();
-                test_rflbt_wait(WAIT_PERIOD_MS);
+                test_rflbt_button();
+                //test_rflbt_wait(WAIT_PERIOD_MS);
             }
         break;
 
@@ -766,8 +768,8 @@ void app_start(void)
     // Retrieve devices
     ensure(!device_get_accessor_by_path(&pv.rf_dev.base, NULL, "rfpacket*", DRIVER_CLASS_RFPACKET));
     ensure(!device_get_accessor_by_path(&pv.timer_dev.base,  NULL, "rfpacket*", DRIVER_CLASS_TIMER));
-    //ensure(!device_get_accessor_by_path(&pv.gpio_dev.base,  NULL, "gpio", DRIVER_CLASS_GPIO));
-    // Set timer reference
+    ensure(!device_get_accessor_by_path(&pv.gpio_dev.base,  NULL, "gpio", DRIVER_CLASS_GPIO));
+    // // Set timer reference
     dev_timer_init_sec(&pv.timer_dev, &pv.msec, 0, 1, 1000);
     printk("Msec: %d\n", pv.msec);
 
@@ -775,9 +777,9 @@ void app_start(void)
     for (uint8_t idx = 1; idx < sizeof(pv.dist_buf)/10; idx++)
         pv.dist_buf[idx*10] = 0x55;
 
-    // Init button
-    //DEVICE_OP(&pv.gpio_dev, set_mode, EFM32_PF6, EFM32_PF6, dev_gpio_mask1, DEV_PIN_INPUT_PULLUP);
-    DEVICE_OP(&pv.gpio_dev, set_mode, EFM32_PB10, EFM32_PB10, dev_gpio_mask1, DEV_PIN_INPUT_PULLUP);
+    // // Init button
+    DEVICE_OP(&pv.gpio_dev, set_mode, EFM32_PF6, EFM32_PF6, dev_gpio_mask1, DEV_PIN_INPUT_PULLUP);
+    // DEVICE_OP(&pv.gpio_dev, set_mode, EFM32_PB10, EFM32_PB10, dev_gpio_mask1, DEV_PIN_INPUT_PULLUP);
     // Init module
     test_rflbt_baserq(&pv.rq_struct);
     test_rflbt_baserq(&pv.rq_disturb);
