@@ -414,20 +414,28 @@ sub parse_cst
 
     push @{$thisop->{out}}, check_reg($thisop, 0);
 
-    if ( check_num($thisop, 2, 0, 56) % 8 ) {
-        error($thisop, "cst shift must be a multiple of 8\n");
-    }
+    my $s = check_num($thisop, 2, 0, 56);
+    error($thisop, "cst shift must be a multiple of 8\n")
+        if ( $s % 8 );
 
     $thisop->{name} =~ /^cst(\d+)/;
     my $w = $1 / 16;
     $thisop->{width} = $w - 1;
 
+    my $n;
     if ( $w == 1 ) {
-        check_num( $thisop, 1, -0x10000, 0xffff);
+        $n = check_num( $thisop, 1, -0x10000, 0xffff);
     } elsif ( $w == 2 ) {
-        check_num( $thisop, 1, -0x100000000, 0xffffffff);
+        $n = check_num( $thisop, 1, -0x100000000, 0xffffffff);
     } else {
         die;
+    }
+
+    $n <<= $s;
+    if ( $n > 0 && $n <= 0xff ) {
+        warning($thisop, "cst8 could be used\n")
+    } elsif ( $n > 0 && $n <= 0xffff && $w > 1 ) {
+        warning($thisop, "cst16 could be used\n")
     }
 }
 
