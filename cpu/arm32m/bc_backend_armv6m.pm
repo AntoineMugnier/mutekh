@@ -221,7 +221,7 @@ sub out_pick {
 
     return "    mov r0, r4\n".
            "    adds r0, #".($thisop->{packout_reg} * 4)."\n".
-           "    movs r1, #".($thisop->{args}->[1])."\n".
+           "    ldr r1, = ".($thisop->{args}->[1])."\n".
            "    bl bc_pick\n";
 }
 
@@ -235,7 +235,7 @@ sub out_place {
 
     return "    mov r0, r4\n".
            "    adds r0, #".($thisop->{packout_reg} * 4)."\n".
-           "    movs r1, #".($thisop->{args}->[1])."\n".
+           "    ldr r1, = ".($thisop->{args}->[1])."\n".
            "    bl bc_place\n";
 }
 

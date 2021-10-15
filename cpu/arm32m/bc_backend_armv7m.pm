@@ -292,7 +292,7 @@ sub out_pick {
     my ($thisop, @w) = @_;
 
     return "    adds r0, r4, #".($thisop->{packout_reg} * 4)."\n".
-           "    movs r1, #".($thisop->{args}->[1])."\n".
+           "    movw r1, #".($thisop->{args}->[1])."\n".
            "    bl bc_pick\n";
 }
 
@@ -300,7 +300,7 @@ sub out_place {
     my ($thisop, @w) = @_;
 
     return "    adds r0, r4, #".($thisop->{packout_reg} * 4)."\n".
-           "    movs r1, #".($thisop->{args}->[1])."\n".
+           "    movw r1, #".($thisop->{args}->[1])."\n".
            "    bl bc_place\n";
 }
 
