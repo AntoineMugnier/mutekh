@@ -639,31 +639,16 @@
 
 // Process irq
 .func s2lp_process_irq
-        .clobber %1 cmd irq3 status flags, %2 irq2, %3 irq1, %4 irq0, %5, %6, %7
-        // Init register
-        cst8                   %irq2,          0
+        .clobber %1 cmd status flags, %2 irq3, %3 irq2, %4 irq1, %5 irq0, %6, %7
         // Send read irq status request (S2LP_READ_REG_BYTE, S2LP_IRQ_STATUS3_ADDR) and get status
         cst16                  %cmd,           0xFA01,   0
+        cst32                  %irq3,          0,        0
         pack32le               %cmd,           2,        6
-        spi_swp                %cmd,           %irq3,    6,         CS_PULSE
-        unpack32be             %irq3,          2,        6
+        spi_swp                %cmd,           %status,  6,         CS_PULSE
+        place                  %status, bits(0, 1, 3, 5, 7, 9)
+        unpack16be             %status, 5, 10
         // Retrieve status
-        mov                    %S2LP_STATUS,   %irq3
-        shi32r                 %S2LP_STATUS,   16
-        // Get irq0 (6th byte)
-        mov                    %irq0,          %irq2
-        shi32r                 %irq0,          16
-        extz                   %irq0,          7
-        // Get irq1 (5th byte)
-        mov                    %irq1,          %irq2
-        shi32r                 %irq1,          24
-        extz                   %irq1,          7
-        // Get irq2 (4th byte)
-        mov                    %irq2,          %irq3
-        extz                   %irq2,          7
-        // Get irq3 (3rd byte)
-        shi32r                 %irq3,          8
-        extz                   %irq3,          7
+        mov                    %S2LP_STATUS, %status
         // Process irq
         tst32s                 %irq0,          bitpos(S2LP_IRQ_TX_FIFO_ERROR)
             jmp16              s2lp_error
