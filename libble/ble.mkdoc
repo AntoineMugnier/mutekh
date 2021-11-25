@@ -396,7 +396,7 @@ devices using this whole stack of protocols defined in @url
     ble/protocol/l2cap.h
     ble/protocol/llcp.h
     ble/protocol/radio.h
-    ble/protocol/signalling.h
+    ble/protocol/signaling.h
     ble/protocol/sm.h
     ble/util/channel_mapper.h
     ble/util/timing_mapper.h
@@ -413,7 +413,7 @@ devices using this whole stack of protocols defined in @url
     @ref {@ble/protocol/l2cap.h},
     @ref {@ble/protocol/llcp.h},
     @ref {@ble/protocol/radio.h},
-    @ref {@ble/protocol/signalling.h},
+    @ref {@ble/protocol/signaling.h},
     @ref {@ble/protocol/sm.h},
     @ref {@ble/util/channel_mapper.h},
     @ref {@ble/util/timing_mapper.h}.
