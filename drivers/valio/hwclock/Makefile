@@ -1,0 +1,2 @@
+subdirs-$(CONFIG_DRIVER_PCF8563) += pcf8563
+subdirs-$(CONFIG_DRIVER_DS3231) += ds3231

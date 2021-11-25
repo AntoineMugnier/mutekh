@@ -1,12 +1,10 @@
-subdirs = sx1509_kbd led motion_sensor
+subdirs = sx1509_kbd led motion_sensor hwclock
 
 objs-$(CONFIG_DRIVER_PUSH_BUTTON) += push_button.o
 objs-$(CONFIG_DRIVER_MTCH6102) += mtch6102.o
 objs-$(CONFIG_DRIVER_BUTTON_SET) += button_set.o
 
 subdirs-$(CONFIG_DRIVER_MATRIX_KEYBOARD) += matrix_keyboard
-subdirs-$(CONFIG_DRIVER_PCF8563) += pcf8563
-subdirs-$(CONFIG_DRIVER_DS3231) += ds3231
 subdirs-$(CONFIG_DRIVER_MLX90614) += mlx90614
 subdirs-$(CONFIG_DRIVER_MAX6675) += max6675
 subdirs-$(CONFIG_DRIVER_HTS221) += hts221
