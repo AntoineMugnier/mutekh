@@ -207,7 +207,7 @@ static KROUTINE_EXEC(pcal6408a_i2c_done)
     struct dev_gpio_rq_s *rq = dev_gpio_rq_head(&pv->queue);
     if (rq && (rq->type == DEV_GPIO_SET_OUTPUT || rq->type == DEV_GPIO_MODE)) {
       logk_debug("%s %p io set done", __FUNCTION__, rq);
-      dev_gpio_rq_pop(&pv->queue);
+      dev_gpio_rq_remove(&pv->queue, rq);
       dev_gpio_rq_done(rq);
     }
     break;
@@ -276,13 +276,17 @@ static DEV_INIT(pcal6408a_init)
 
   err = dev_drv_i2c_bytecode_init(dev, &pv->i2c_rq, &pcal6408a_bytecode,
                                   &pv->i2c, NULL, NULL);
-  if (err)
+  if (err) {
+    logk_fatal("I2C bytecode init error: %s", strerror(-err));
     goto err_pv;
+  }
 
   device_irq_source_init(dev, &pv->irq_ep, 1, &pcal6408a_irq);
   err = device_irq_source_link(dev, &pv->irq_ep, 1, -1);
-  if (err)
+  if (err) {
+    logk_fatal("IRQ init error: %s", strerror(-err));
     goto err_i2c;
+  }
 
   dev_i2c_ctrl_rq_init(&pv->i2c_rq.base, pcal6408a_i2c_done);
   pv->i2c_rq.pvdata = dev;
