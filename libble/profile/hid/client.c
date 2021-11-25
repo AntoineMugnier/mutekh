@@ -703,7 +703,7 @@ static void hid_client_context_changed(struct net_layer_s *layer)
     hid_client_request(hid);
 }
 
-static void hid_client_dandling(struct net_layer_s *layer)
+static void hid_client_dangling(struct net_layer_s *layer)
 {
   struct hid_client_s *hid = hid_client_s_from_layer(layer);
   (void)hid;
@@ -796,7 +796,7 @@ static const struct hid_client_handler_s hid_handler = {
   .base.destroyed = hid_client_destroyed,
   .base.task_handle = hid_client_task_handle,
   .base.context_changed = hid_client_context_changed,
-  .base.dandling = hid_client_dandling,
+  .base.dangling = hid_client_dangling,
   .descriptor_discover = _client_descriptor_discover,
   .descriptor_serialize = _client_descriptor_serialize,
   .report_set = _client_report_set,

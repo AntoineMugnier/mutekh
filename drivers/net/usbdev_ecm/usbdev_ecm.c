@@ -570,7 +570,7 @@ void ecm_layer_context_changed(struct net_layer_s *layer)
 }
 
 static
-void ecm_layer_dandling(struct net_layer_s *layer)
+void ecm_layer_dangling(struct net_layer_s *layer)
 {
   struct ecm_private_s *pv = ecm_private_s_from_layer(layer);
 
@@ -612,7 +612,7 @@ static const struct net_layer_handler_s ecm_layer_handler =
   .task_handle = ecm_layer_task_handle,
   .child_context_adjust = ecm_layer_child_context_adjust,
   .context_changed = ecm_layer_context_changed,
-  .dandling = ecm_layer_dandling,
+  .dangling = ecm_layer_dangling,
   .bound = ecm_layer_bound,
   .unbound = ecm_layer_unbound,
 };

@@ -1112,7 +1112,7 @@ void ble_llcp_destroyed(struct net_layer_s *layer)
   mem_free(llcp);
 }
 
-static void ble_llcp_dandling(struct net_layer_s *layer)
+static void ble_llcp_dangling(struct net_layer_s *layer)
 {
   struct ble_llcp_s *llcp = ble_llcp_s_from_layer(layer);
 
@@ -1166,7 +1166,7 @@ static const struct ble_llcp_handler_s llcp_handler = {
   .base.bound = ble_llcp_bound,
   .base.unbound = ble_llcp_unbound,
   .base.context_changed = ble_llcp_context_changed,
-  .base.dandling = ble_llcp_dandling,
+  .base.dangling = ble_llcp_dangling,
   .connection_close = _ble_llcp_connection_close,
   .encryption_enable = _ble_llcp_encryption_enable,
   .encryption_restart = _ble_llcp_encryption_restart,

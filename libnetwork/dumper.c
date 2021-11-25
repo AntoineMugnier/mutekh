@@ -64,7 +64,7 @@ void net_dumper_task_handle(struct net_layer_s *layer,
 }
 
 static
-void net_dumper_dandling(struct net_layer_s *layer)
+void net_dumper_dangling(struct net_layer_s *layer)
 {
   struct net_dumper_s *dumper = net_dumper_s_from_layer(layer);
 
@@ -74,7 +74,7 @@ void net_dumper_dandling(struct net_layer_s *layer)
 static const struct net_layer_handler_s dumper_handler = {
   .destroyed = net_dumper_destroyed,
   .task_handle = net_dumper_task_handle,
-  .dandling = net_dumper_dandling,
+  .dangling = net_dumper_dangling,
 };
 
 error_t net_dumper_create(struct net_scheduler_s *scheduler,
