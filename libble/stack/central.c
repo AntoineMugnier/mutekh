@@ -195,7 +195,13 @@ static error_t scan_start(struct ble_central_s *ctr)
 
   ctr->params.access_address = ble_stack_access_address_generate(ctr->context);
   dev_rng_wait_read(&ctr->context->rng, &ctr->params.crc_init, 4);
+  // 6.B.2.3.3.1: It shall have a random value in the range 5 to 16.
+  ctr->params.hop = ((ctr->params.crc_init >> 24) & 0xf) + 5;
   ctr->params.crc_init &= 0xffffff;
+  ctr->params.channel_map = (1ull << 37) - 1;
+
+  logk("Using access address %08x, crcinit %06x, hop %d",
+       ctr->params.access_address, ctr->params.crc_init, ctr->params.hop);
 
   ble_stack_context_local_address_get(ctr->context, &ctr->params.local_addr);
 

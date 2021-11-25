@@ -130,9 +130,6 @@ static bool_t scanner_ctx_event_opened(struct nrf5x_ble_context_s *context)
   scan->conn_params.timing.timeout = __MAX(
     (scan->conn_params.timing.interval + 7) / 8 * 2 * (scan->timing.latency + 1),
     scan->timing.timeout);
-  // Should probably share channel quality measurements...
-  scan->conn_params.channel_map = (1ull << 37) - 1;
-  scan->conn_params.hop = 16;
   // 
   scan->conn_params.sca = scan->context.pv->sca;
   // Should schedule where not colliding
