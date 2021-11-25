@@ -13,7 +13,6 @@ objs-$(CONFIG_MUTEK_MEMALLOC_SMART) += memory_allocator_smart.o
 objs-$(CONFIG_MUTEK_MEMALLOC_SIMPLE) += memory_allocator_simple.o
 objs-$(CONFIG_COMPILE_INSTRUMENT) += instrument.o
 objs-$(CONFIG_MUTEK_PRINTK) += printk.o
-objs-$(CONFIG_MUTEK_PRINTK_FATAL_ABORT) += printk_fatal.o
 objs-$(CONFIG_MUTEK_PRINTK_RING) += printk_ring.o
 objs-$(CONFIG_MUTEK_LOGO) += mutek_logo_320x200.o
 objs-$(CONFIG_VMEM_PHYS_ALLOC) += page_alloc.o
