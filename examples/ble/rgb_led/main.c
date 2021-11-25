@@ -89,7 +89,7 @@ static CONTEXT_ENTRY(main)
 
   memset(app, 0, sizeof(*app));
 
-  err = ble_stack_context_init(&app->context, "/ble", "/rtc1", "/rng", "/aes", "/nvmc");
+  err = ble_stack_context_init(&app->context, "/ble", "/rtc1", "/rng", "/aes", NULL);
   ensure(!err && "stack context failed");
 
   err = ble_peripheral_init(&app->peripheral, &peri_params, &peri_handler, &app->context);

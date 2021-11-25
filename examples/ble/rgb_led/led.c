@@ -24,28 +24,25 @@
 static uint8_t led_color[4] = {0,0,255,255};
 
 static
+KROUTINE_EXEC(led_done)
+{
+  struct dev_valio_rq_s *rq = dev_valio_rq_from_kr(kr);
+  struct led_s *led = led_s_from_led_rq(rq);
+
+  (void)led;
+}
+
+static
 uint8_t on_led_color_write(struct ble_gattdb_client_s *client,
                            struct ble_gattdb_registry_s *service,
                            uint8_t charid)
 {
   struct led_s *led = led_s_from_dbs(service);
 
-  for (uint8_t i = 0; i < 3; ++i) {
-    led->cfg[i].duty.num = led_color[i];
-    led->cfg[i].duty.denom = ((256 - led_color[3]) << 4) - (1 << 4) + 0x100;
-  }
+  for (uint8_t i = 0; i < 3; ++i)
+    led->color.lum[i] = led_color[i];
 
-  struct dev_request_status_s status;
-  struct dev_pwm_rq_s rq = {
-    .cfg = led->cfg,
-    .chan_mask = 0x7,
-    .error = 0,
-    .mask = DEV_PWM_MASK_DUTY,
-  };
-
-  dev_request_sched_init(&rq.base, &status);
-  DEVICE_OP(&led->pwm, request, &rq);
-  dev_request_sched_wait(&status);
+  DEVICE_OP(&led->led, request, &led->led_rq);
 
   return 0;
 }
@@ -65,31 +62,19 @@ error_t led_service_register(struct led_s *led,
 {
   error_t err;
 
-  err = device_get_accessor_by_path(&led->pwm.base, NULL, "leds", DRIVER_CLASS_PWM);
+  err = device_get_accessor_by_path(&led->led.base, NULL, "led", DRIVER_CLASS_VALIO);
   if (err)
     return err;
 
-  for (uint8_t i = 0; i < 3; ++i) {
-    led->cfg[i].freq.num = 100;
-    led->cfg[i].freq.denom = 1;
-    led->cfg[i].duty.num = 0;
-    led->cfg[i].duty.denom = 1;
-    led->cfg[i].pol = DEV_PWM_POL_LOW;
-  }
+  for (uint8_t i = 0; i < 3; ++i)
+    led->color.lum[i] = 0;
 
-  struct dev_request_status_s status;
-  struct dev_pwm_rq_s rq = {
-    .cfg = led->cfg,
-    .chan_mask = 0x7,
-    .error = 0,
-    .mask = DEV_PWM_MASK_FREQ | DEV_PWM_MASK_DUTY | DEV_PWM_MASK_POL,
-  };
+  dev_valio_rq_init(&led->led_rq, led_done);
+  led->led_rq.data = &led->color;
+  led->led_rq.attribute = VALIO_LED;
+  led->led_rq.type = DEVICE_VALIO_WRITE;
 
-  dev_request_sched_init(&rq.base, &status);
-  DEVICE_OP(&led->pwm, request, &rq);
-  dev_request_sched_wait(&status);
-
-  printk("PWM init: %d\n", rq.error);
+  DEVICE_OP(&led->led, request, &led->led_rq);
 
   return ble_gattdb_service_register(&led->dbs, db, &led_service);
 }
