@@ -31,6 +31,7 @@
 
 #include <device/device.h>
 #include <device/resources.h>
+#include <device/request.h>
 #include <device/driver.h>
 #include <device/irq.h>
 #include <device/class/iomux.h>
