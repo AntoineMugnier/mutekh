@@ -43,7 +43,6 @@ struct termui_optctx_smi_opts_s
   struct device_smi_s accessor;
 
   enum dev_smi_clause_e clause;
-  enum dev_smi_op_e op;
   uint8_t prtad;
   uint8_t devad;
   uint16_t address;
@@ -69,7 +68,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_smi_write)
     c->devad = 0;
 
   c->transfer.data.clause = c->clause;
-  c->transfer.data.op = c->op;
+  c->transfer.data.op = DEV_SMI_WRITE;
   c->transfer.data.prtad = c->prtad;
   c->transfer.data.devad = c->devad;
   c->transfer.data.address = c->address;
@@ -92,7 +91,7 @@ static TERMUI_CON_COMMAND_PROTOTYPE(shell_smi_read)
     c->devad = 0;
 
   c->transfer.data.clause = c->clause;
-  c->transfer.data.op = c->op;
+  c->transfer.data.op = DEV_SMI_READ;
   c->transfer.data.prtad = c->prtad;
   c->transfer.data.devad = c->devad;
   c->transfer.data.address = c->address;
