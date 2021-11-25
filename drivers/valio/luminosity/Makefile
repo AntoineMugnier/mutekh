@@ -1,0 +1,1 @@
+subdirs-$(CONFIG_DRIVER_MAX44009) += max44009
