@@ -56,7 +56,13 @@ static PRINTK_HANDLER(efm32_usart_printk_out)
   }
 }
 
-void efm32_usart_printk_init()
+void efm32_usart_printk_clock_override(uint32_t ref_clock, uint32_t rate)
+{
+  uint32_t div = (256ULL * ref_clock) / (4 * rate) - 256;
+  cpu_mem_write_32(CONFIG_MUTEK_PRINTK_ADDR + EFM32_USART_CLKDIV_ADDR, div);
+}
+
+void efm32_usart_printk_init(void)
 {
   uint32_t hfperclken;
 
