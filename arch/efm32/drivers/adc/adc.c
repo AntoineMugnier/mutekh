@@ -19,6 +19,8 @@
     Copyright (c) 2016 Julien Peeters <contact@julienpeeters.net>
 */
 
+#define LOGK_MODULE_ID "eadc"
+
 #include <hexo/types.h>
 #include <hexo/endian.h>
 #include <hexo/iospace.h>
@@ -40,13 +42,51 @@
 
 #include <arch/efm32/adc.h>
 
-//#define ADC_DEBUG
+/*
+//  Typical instance:
 
-#if defined(ADC_DEBUG)
-# define dprintk(...) printk(__VA_ARGS__)
-#else
-# define dprintk(...) do {} while(0)
+#ifdef CONFIG_DRIVER_EFM32_ADC
+
+DEV_DECLARE_STATIC(
+    adc0_dev, "adc0", 0, efm32_adc_drv,
+    DEV_STATIC_RES_MEM(EFM32_ADC0_ADDR, EFM32_ADC0_ADDR + 0x400),
+# ifdef CONFIG_DEVICE_CLOCK
+    DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_ADC0, 0),
+# else
+    DEV_STATIC_RES_FREQ(14000000, 1),
+# endif
+
+    DEV_STATIC_RES_DEV_ICU("/cpu"),
+    DEV_STATIC_RES_IRQ(0, EFM32_IRQ_ADC0, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
+    DEV_STATIC_RES_UINT_ARRAY_PARAM("config",
+        // External Channel 0
+        EFM32_ADC_SINGLECTRL_RES_SHIFT_VAL(12BITS)
+        | EFM32_ADC_SINGLECTRL_INPUTSEL_SHIFT_VAL(CH0_CH0CH1)
+        | EFM32_ADC_SINGLECTRL_REF_SHIFT_VAL(2V5)
+        | EFM32_ADC_SINGLECTRL_AT_SHIFT_VAL(64CYCLES),
+        // External Channel 7
+        EFM32_ADC_SINGLECTRL_RES_SHIFT_VAL(12BITS)
+        | EFM32_ADC_SINGLECTRL_INPUTSEL_SHIFT_VAL(CH7)
+        | EFM32_ADC_SINGLECTRL_REF_SHIFT_VAL(2V5)
+        | EFM32_ADC_SINGLECTRL_AT_SHIFT_VAL(64CYCLES),
+        // Internal temperature
+        EFM32_ADC_SINGLECTRL_RES_SHIFT_VAL(12BITS)
+        | EFM32_ADC_SINGLECTRL_INPUTSEL_SHIFT_VAL(TEMP)
+        | EFM32_ADC_SINGLECTRL_REF_SHIFT_VAL(1V25)
+        | EFM32_ADC_SINGLECTRL_AT_SHIFT_VAL(256CYCLES),
+        // VDD
+        EFM32_ADC_SINGLECTRL_RES_SHIFT_VAL(12BITS)
+        | EFM32_ADC_SINGLECTRL_INPUTSEL_SHIFT_VAL(VDDDIV3)
+        | EFM32_ADC_SINGLECTRL_REF_SHIFT_VAL(1V25)
+        | EFM32_ADC_SINGLECTRL_AT_SHIFT_VAL(256CYCLES),
+        ),
+    );
+
+// Call valio driver with an array of 4 values and mask = 0xf.
+
 #endif
+
+*/
 
 struct efm32_adc_private_s
 {
@@ -68,7 +108,7 @@ struct efm32_adc_private_s
   uint16_t                   config_count;
 
   /* Pending channel */
-  uint8_t                    pending;
+  uint16_t                    pending;
 
   /* Index of the current channel */
   uint8_t                    index;
@@ -90,15 +130,16 @@ void efm32_adc_clk_changed(struct efm32_adc_private_s * pv)
 static
 void efm32_adc_sample_next(struct efm32_adc_private_s * pv)
 {
-  uint8_t line = bit_ctz(pv->pending);
-  pv->pending &= ~(1 << line);
+  pv->index = bit_ctz(pv->pending);
+  pv->pending &= ~bit(pv->index);
 
-  dprintk("adc sample %d line %d conf %08x\n", pv->index, line, pv->config[line]);
+  uint32_t cfg = pv->config[pv->index];
+  cfg &= ~EFM32_ADC_SINGLECTRL_ADJ;
+  cfg &= ~EFM32_ADC_SINGLECTRL_REP;
 
-  uint32_t x = line < pv->config_count ? pv->config[line] : 0;
-  EFM32_ADC_SINGLECTRL_INPUTSEL_SETVAL(x, line & 0x7);
-  cpu_mem_write_32(pv->addr + EFM32_ADC_SINGLECTRL_ADDR, endian_le32(x));
+  logk_debug("Index %d config %08x\n", pv->index, cfg);
 
+  cpu_mem_write_32(pv->addr + EFM32_ADC_SINGLECTRL_ADDR, endian_le32(cfg));
   cpu_mem_write_32(pv->addr + EFM32_ADC_IFC_ADDR, -1);
   cpu_mem_write_32(pv->addr + EFM32_ADC_CMD_ADDR,
                    endian_le32(EFM32_ADC_CMD_SINGLESTART));
@@ -116,7 +157,7 @@ bool_t efm32_adc_request_next(struct efm32_adc_private_s * pv)
 
   group = rq->data;
 
-  pv->pending = group->mask;
+  pv->pending = group->mask & bit_mask(0, pv->config_count);
   pv->index   = 0;
 
 #if defined(CONFIG_DEVICE_CLOCK_GATING)
@@ -201,12 +242,10 @@ DEV_IRQ_SRC_PROCESS(efm32_adc_irq)
       group->value[pv->index] =
         endian_le32(cpu_mem_read_32(pv->addr + EFM32_ADC_SINGLEDATA_ADDR));
 
-      dprintk("adc sample %d value %d\n", pv->index, group->value[pv->index]);
+      logk_debug("Index %d Value 0x%04x\n", pv->index, group->value[pv->index]);
 
       cpu_mem_write_32(pv->addr + EFM32_ADC_CMD_ADDR,
                        endian_le32(EFM32_ADC_CMD_SINGLESTOP));
-
-      ++pv->index;
 
       if (!pv->pending)
         goto callback;
@@ -358,10 +397,8 @@ DEV_USE(efm32_adc_use)
         struct device_s *            dev  = sink->dev;
         struct efm32_adc_private_s * pv   = dev->drv_pv;
 
-        LOCK_SPIN_IRQ(&dev->lock);
         pv->freq = chg->freq;
         efm32_adc_clk_changed(pv);
-        LOCK_RELEASE_IRQ(&dev->lock);
         return 0;
       }
 #endif
