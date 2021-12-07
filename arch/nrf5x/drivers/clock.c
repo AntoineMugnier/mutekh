@@ -200,8 +200,10 @@ static DEV_CMU_NODE_INFO(nrf5x_clock_node_info)
   };
   uint32_t returned = 0;
 
-  if (node_id >= NRF_CLOCK_NODE_COUNT)
+  if (node_id >= NRF_CLOCK_NODE_COUNT) {
+    logk_debug("node ID error %d", node_id);
     return -EINVAL;
+  }
 
   returned |= DEV_CMU_INFO_NAME;
   returned |= DEV_CMU_INFO_FREQ;
@@ -554,6 +556,7 @@ static DEV_CMU_CONFIG_MUX(nrf5x_clock_config_mux)
       return 0;
 
     default:
+      logk_debug("Bad mux %d -> %d", parent_id, node_id);
       return -EINVAL;
     }
 
@@ -568,10 +571,12 @@ static DEV_CMU_CONFIG_MUX(nrf5x_clock_config_mux)
       return 0;
 
     default:
+      logk_debug("Bad mux %d -> %d", parent_id, node_id);
       return -EINVAL;
     }
   }
 
+  logk_debug("Bad mux %d -> %d", parent_id, node_id);
   return -ENOENT;
 }
 
@@ -581,8 +586,10 @@ static DEV_CMU_CONFIG_OSC(nrf5x_clock_config_osc)
 
   switch (node_id) {
   case NRF_CLOCK_OSC_LFXO:
-    if (freq->num != 32768 || freq->denom != 1)
+    if (freq->num != 32768 || freq->denom != 1) {
+      logk_debug("LFXO not 32768 Hz");
       return -EINVAL;
+    }
     pv->lfxo_freq = *freq;
     return 0;
 
@@ -592,8 +599,10 @@ static DEV_CMU_CONFIG_OSC(nrf5x_clock_config_osc)
 #endif
 
   case NRF_CLOCK_OSC_LFRC:
-    if (freq->num != 32768 || freq->denom != 1)
+    if (freq->num != 32768 || freq->denom != 1) {
+      logk_debug("LFRC not 32768 Hz");
       return -EINVAL;
+    }
 #if LFRC_CAL
     pv->cal_en_next = (freq->acc_e <= 18);
 #endif
@@ -604,8 +613,10 @@ static DEV_CMU_CONFIG_OSC(nrf5x_clock_config_osc)
 #if !defined(HAS_HFOSC_64M)
          freq->num != 16000000 &&
 #endif
-         freq->num != 32000000) || freq->denom != 1)
+         freq->num != 32000000) || freq->denom != 1) {
+      logk_debug("HFXO not relevant freq");
       return -EINVAL;
+    }
     pv->hfxo_freq = *freq;
     return 0;
 
@@ -616,11 +627,14 @@ static DEV_CMU_CONFIG_OSC(nrf5x_clock_config_osc)
 #else
          freq->num != 16000000
 #endif
-         ) || freq->denom != 1)
+         ) || freq->denom != 1) {
+      logk_debug("HFRC not relevant freq");
       return -EINVAL;
+    }
     return 0;
   }
 
+  logk_debug("No such OSC ID %d", node_id);
   return -ENOENT;
 }
 
@@ -882,8 +896,10 @@ static DEV_INIT(nrf5x_clock_init)
   err = device_irq_source_link(dev, pv->irq_ep,
                                _CONFIG_DRIVER_NRF5X_CLOCK_LFRC_CAL ? 2 : 1,
                                -1);
-  if (err)
+  if (err) {
+    logk_debug("Bad IRQ");
     goto free_pv;
+  }
 
 #if LFRC_CAL && 52000 <= CONFIG_NRF5X_MODEL && CONFIG_NRF5X_MODEL <= 52999
   // PAN 36: CLOCK: Some registers are not reset when expected
@@ -926,8 +942,10 @@ static DEV_INIT(nrf5x_clock_init)
     dev_clock_source_init(dev, &pv->src[i], &nrf5x_clock_ep_setup);
 
   err = dev_cmu_init(dev, &nrf5x_clock_config_ops);
-  if (err)
+  if (err) {
+    logk_debug("CMU init error: %s", strerror(err));
     goto free_pv;
+  }
 
   return 0;
 
