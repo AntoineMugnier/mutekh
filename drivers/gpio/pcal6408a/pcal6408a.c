@@ -36,8 +36,8 @@ enum pcal6408a_state_e
   STATE_IDLE,
   STATE_IO_GET,
   STATE_IO_SET,
-  STATE_NOTIFY_UPDATE,
-  STATE_NOTIFY_READ,
+  STATE_IRQ_SRC_UPDATE,
+  STATE_IRQ_HANDLE,
 };
 
 struct pcal6408a_priv_s
@@ -50,8 +50,10 @@ struct pcal6408a_priv_s
   dev_request_queue_root_t until_queue;
 
   enum pcal6408a_state_e state;
-  bool_t until_mask_dirty;
-  bool_t until_evented;
+  bool_t irq_src_dirty;
+  bool_t irq_pending;
+  gpio_id_t gpio_map[1];
+  gpio_width_t gpio_wmap[1];
 };
 
 DRIVER_PV(struct pcal6408a_priv_s);
@@ -64,15 +66,15 @@ static void pcal6408a_handle_next(struct device_s *dev)
   if (pv->state != STATE_IDLE)
     return;
 
-  if (pv->until_evented) {
+  if (pv->irq_pending) {
     logk_debug("%s evented, reading", __FUNCTION__);
-    pv->until_evented = 0;
-    pv->state = STATE_NOTIFY_READ;
-    dev_i2c_bytecode_start(&pv->i2c, &pv->i2c_rq, &pcal6408a_get_input, 0);
+    pv->irq_pending = 0;
+    pv->state = STATE_IRQ_HANDLE;
+    dev_i2c_bytecode_start(&pv->i2c, &pv->i2c_rq, &pcal6408a_irq_handle, 0);
     return;
   }
 
-  if (pv->until_mask_dirty) {
+  if (pv->irq_src_dirty) {
     uint_fast8_t mask = 0;
     uint_fast8_t value = 0;
 
@@ -85,10 +87,10 @@ static void pcal6408a_handle_next(struct device_s *dev)
         value |= (rq->until.data[0] << rq->io_first) & range;
       });
 
-    pv->state = STATE_NOTIFY_UPDATE;
-    pv->until_mask_dirty = 0;
-    dev_i2c_bytecode_start(&pv->i2c, &pv->i2c_rq, &pcal6408a_until,
-                           PCAL6408A_UNTIL_BCARGS(mask));
+    pv->state = STATE_IRQ_SRC_UPDATE;
+    pv->irq_src_dirty = 0;
+    bc_set_reg(&pv->i2c_rq.vm, PCAL6408A_BCGLOBAL_INPUT_MONITOR, mask);
+    dev_i2c_bytecode_start(&pv->i2c, &pv->i2c_rq, &pcal6408a_irq_src_update, 0);
 
     return;
   }
@@ -106,28 +108,34 @@ static void pcal6408a_handle_next(struct device_s *dev)
     enum dev_pin_driving_e mode = rq->mode.mode;
 
     if (mode & (DEV_PIN_DRIVE_UP_ | DEV_PIN_DRIVE_DOWN_))
-      bc_set_reg(&pv->i2c_rq.vm, PCAL6408A_SET_MODE_BCIN_INPUT_DIRECTION,
-                 bc_get_reg(&pv->i2c_rq.vm, PCAL6408A_SET_MODE_BCIN_INPUT_DIRECTION)
+      bc_set_reg(&pv->i2c_rq.vm, PCAL6408A_BCGLOBAL_DIR_IN,
+                 bc_get_reg(&pv->i2c_rq.vm, PCAL6408A_BCGLOBAL_DIR_IN)
                  & ~mask);
     else
-      bc_set_reg(&pv->i2c_rq.vm, PCAL6408A_SET_MODE_BCIN_INPUT_DIRECTION,
-                 bc_get_reg(&pv->i2c_rq.vm, PCAL6408A_SET_MODE_BCIN_INPUT_DIRECTION)
+      bc_set_reg(&pv->i2c_rq.vm, PCAL6408A_BCGLOBAL_DIR_IN,
+                 bc_get_reg(&pv->i2c_rq.vm, PCAL6408A_BCGLOBAL_DIR_IN)
                  | mask);
 
     if (mode & (DEV_PIN_RESISTOR_UP_ | DEV_PIN_RESISTOR_DOWN_)) {
-      bc_set_reg(&pv->i2c_rq.vm, PCAL6408A_SET_MODE_BCIN_PULL_ENABLE,
-                 bc_get_reg(&pv->i2c_rq.vm, PCAL6408A_SET_MODE_BCIN_PULL_ENABLE)
+      bc_set_reg(&pv->i2c_rq.vm, PCAL6408A_BCGLOBAL_PULL_ENABLE,
+                 bc_get_reg(&pv->i2c_rq.vm, PCAL6408A_BCGLOBAL_PULL_ENABLE)
                  | mask);
 
       if (mode & DEV_PIN_RESISTOR_UP_)
-        bc_set_reg(&pv->i2c_rq.vm, PCAL6408A_SET_MODE_BCIN_PULL_UP,
-                 bc_get_reg(&pv->i2c_rq.vm, PCAL6408A_SET_MODE_BCIN_PULL_UP)
+        bc_set_reg(&pv->i2c_rq.vm, PCAL6408A_BCGLOBAL_PULL_UP,
+                 bc_get_reg(&pv->i2c_rq.vm, PCAL6408A_BCGLOBAL_PULL_UP)
                  | mask);
       else
-        bc_set_reg(&pv->i2c_rq.vm, PCAL6408A_SET_MODE_BCIN_PULL_UP,
-                 bc_get_reg(&pv->i2c_rq.vm, PCAL6408A_SET_MODE_BCIN_PULL_UP)
+        bc_set_reg(&pv->i2c_rq.vm, PCAL6408A_BCGLOBAL_PULL_UP,
+                 bc_get_reg(&pv->i2c_rq.vm, PCAL6408A_BCGLOBAL_PULL_UP)
                  & ~mask);
     }
+
+    logk_debug("set mode dir_in %02x val_out %02x pull %02x up %02x",
+               bc_get_reg(&pv->i2c_rq.vm, PCAL6408A_BCGLOBAL_DIR_IN),
+               bc_get_reg(&pv->i2c_rq.vm, PCAL6408A_BCGLOBAL_OUTPUT_PORT),
+               bc_get_reg(&pv->i2c_rq.vm, PCAL6408A_BCGLOBAL_PULL_ENABLE),
+               bc_get_reg(&pv->i2c_rq.vm, PCAL6408A_BCGLOBAL_PULL_UP));
 
     pv->state = STATE_IO_SET;
     dev_i2c_bytecode_start(&pv->i2c, &pv->i2c_rq, &pcal6408a_set_mode, 0);
@@ -139,9 +147,15 @@ static void pcal6408a_handle_next(struct device_s *dev)
     uint_fast8_t set = (rq->output.set_mask[0] << rq->io_first) & range;
     uint_fast8_t clear = (rq->output.clear_mask[0] << rq->io_first) | ~range;
 
-    bc_set_reg(&pv->i2c_rq.vm, PCAL6408A_SET_OUTPUT_BCIN_OUTPUT_PORT,
-               set ^ (bc_get_reg(&pv->i2c_rq.vm, PCAL6408A_SET_OUTPUT_BCIN_OUTPUT_PORT)
+    bc_set_reg(&pv->i2c_rq.vm, PCAL6408A_BCGLOBAL_OUTPUT_PORT,
+               set ^ (bc_get_reg(&pv->i2c_rq.vm, PCAL6408A_BCGLOBAL_OUTPUT_PORT)
                       & (set ^ clear)));
+
+    logk_debug("set output dir_in %02x val_out %02x pull %02x up %02x",
+               bc_get_reg(&pv->i2c_rq.vm, PCAL6408A_BCGLOBAL_DIR_IN),
+               bc_get_reg(&pv->i2c_rq.vm, PCAL6408A_BCGLOBAL_OUTPUT_PORT),
+               bc_get_reg(&pv->i2c_rq.vm, PCAL6408A_BCGLOBAL_PULL_ENABLE),
+               bc_get_reg(&pv->i2c_rq.vm, PCAL6408A_BCGLOBAL_PULL_UP));
 
     pv->state = STATE_IO_SET;
     dev_i2c_bytecode_start(&pv->i2c, &pv->i2c_rq, &pcal6408a_set_output, 0);
@@ -150,6 +164,9 @@ static void pcal6408a_handle_next(struct device_s *dev)
 
   case DEV_GPIO_GET_INPUT:
     pv->state = STATE_IO_GET;
+
+    logk_debug("get");
+    
     dev_i2c_bytecode_start(&pv->i2c, &pv->i2c_rq, &pcal6408a_get_input, 0);
     return;
 
@@ -168,34 +185,44 @@ static KROUTINE_EXEC(pcal6408a_i2c_done)
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  switch(pv->state) {
-  case STATE_NOTIFY_READ: {
-    uint_fast8_t cur = bc_get_reg(&pv->i2c_rq.vm, 0);
+  uint_fast8_t status = bc_get_reg(&pv->i2c_rq.vm, PCAL6408A_BCGLOBAL_IRQ_STATUS);
+  uint_fast8_t cur = bc_get_reg(&pv->i2c_rq.vm, PCAL6408A_BCGLOBAL_INPUT_PORT);
+  uint_fast8_t input_monitor = bc_get_reg(&pv->i2c_rq.vm, PCAL6408A_BCGLOBAL_INPUT_MONITOR);
+  uint_fast8_t irq = dev_gpio_input(&pv->i2c_rq.gpio, pv->i2c_rq.gpio_map[0], NULL) & 1;
 
+  logk_debug("%s state %d cur %02x input_mon %02x status %02x irq %d", __FUNCTION__, pv->state, cur, input_monitor, status, irq);
+
+  if (irq == 0) {
+    pv->irq_pending = 1;
+  }
+  
+  switch(pv->state) {
+  case STATE_IRQ_SRC_UPDATE:
+  case STATE_IRQ_HANDLE:
     GCT_FOREACH(dev_request_queue, &pv->until_queue, brq, {
         struct dev_gpio_rq_s *rq = dev_gpio_rq_s_cast(brq);
         uint_fast8_t range = bit_range(rq->io_first, rq->io_last);
         uint_fast8_t mask = (rq->until.mask[0] << rq->io_first);
         uint_fast8_t data = (rq->until.data[0] << rq->io_first);
 
-        logk_debug("%s %p %02x %02x %02x %02x %02x",
-                __FUNCTION__, rq, range, mask, data, cur,
-                range & mask & (data ^ cur));
+        logk_debug("%s %p waiting for %02x/%02x, cur = %02x",
+             __FUNCTION__, rq, data & mask, mask, cur & mask);
 
         if (range & mask & (data ^ cur)) {
           dev_gpio_rq_remove(&pv->until_queue, rq);
           dev_gpio_rq_done(rq);
+          pv->irq_src_dirty = 1;
         }
       });
     // Dont break, notify read is actually an IO get: fallthroug is OK
-  }
+    // fallthrough
 
   case STATE_IO_GET:
     GCT_FOREACH(dev_request_queue, &pv->queue, brq, {
         struct dev_gpio_rq_s *rq = dev_gpio_rq_s_cast(brq);
         if (rq->type == DEV_GPIO_GET_INPUT) {
           uint_fast8_t range = bit_range(rq->io_first, rq->io_last);
-          rq->input.data[0] = ((bc_get_reg(&pv->i2c_rq.vm, 0) & range) >> rq->io_first);
+          rq->input.data[0] = ((cur & range) >> rq->io_first);
           logk_debug("%s %p io get done %02x", __FUNCTION__, rq, rq->input.data[0]);
           dev_gpio_rq_remove(&pv->queue, rq);
           dev_gpio_rq_done(rq);
@@ -238,7 +265,7 @@ static DEV_GPIO_REQUEST(pcal6408a_request)
   case DEV_GPIO_UNTIL:
     logk_debug("%s until %p", __FUNCTION__, rq);
     dev_gpio_rq_pushback(&pv->until_queue, rq);
-    pv->until_mask_dirty = 1;
+    pv->irq_src_dirty = 1;
     break;
   }
 
@@ -252,7 +279,7 @@ static DEV_IRQ_SRC_PROCESS(pcal6408a_irq)
 
   lock_spin(&dev->lock);
   logk_debug("%s", __FUNCTION__);
-  pv->until_evented = 1;
+  pv->irq_pending = 1;
   pcal6408a_handle_next(dev);
   lock_release(&dev->lock);
 }
@@ -267,6 +294,7 @@ static DEV_INIT(pcal6408a_init)
 {
   struct pcal6408a_priv_s *pv;
   error_t err;
+  struct device_gpio_s *gpio;
 
   pv = mem_alloc(sizeof(*pv), mem_scope_sys);
   if (!pv)
@@ -275,7 +303,7 @@ static DEV_INIT(pcal6408a_init)
   memset(pv, 0, sizeof(*pv));
 
   err = dev_drv_i2c_bytecode_init(dev, &pv->i2c_rq, &pcal6408a_bytecode,
-                                  &pv->i2c, NULL, NULL);
+                                  &pv->i2c, &gpio, NULL);
   if (err) {
     logk_fatal("I2C bytecode init error: %s", strerror(-err));
     goto err_pv;
@@ -288,6 +316,10 @@ static DEV_INIT(pcal6408a_init)
     goto err_i2c;
   }
 
+  err = device_gpio_setup(gpio, dev, "+irq:1", pv->gpio_map, pv->gpio_wmap);
+  if (err)
+    goto err_pv;
+
   dev_i2c_ctrl_rq_init(&pv->i2c_rq.base, pcal6408a_i2c_done);
   pv->i2c_rq.pvdata = dev;
 
@@ -297,6 +329,9 @@ static DEV_INIT(pcal6408a_init)
   dev->drv_pv = pv;
 
   pv->state = STATE_INIT;
+  pv->i2c_rq.gpio_map = pv->gpio_map;
+  pv->i2c_rq.gpio_wmap = pv->gpio_wmap;
+  bc_set_reg(&pv->i2c_rq.vm, PCAL6408A_BCGLOBAL_INPUT_MONITOR, 0);
   dev_i2c_bytecode_start(&pv->i2c, &pv->i2c_rq, &pcal6408a_reset, 0);
 
   return 0;
