@@ -25,14 +25,24 @@
 
         .custom i2c
         .name pcal6408a
+        .global %8 dir_in, %9 pull_up, %10 pull_enable, %11 output_port, %12 input_monitor, %13 input_port, %14 irq_status
+
+#define REG_SET(tmp, reg, value) \
+    cst16 tmp, (reg) | ((value) << 8), 0 ; \
+    pack16le tmp, 1, 2 ; \
+    i2c_wrr tmp, 2, STOP
 
 .func pcal6408a_set_mode
         .export pcal6408a_set_mode
         .clobber %0, %1
-        .input %8 input_direction, %9 pull_up, %10 pull_enable
 
-        cst8 %0, PCAL6408A_INPUT_DIRECTION
-        mov %1, %input_direction
+        cst8 %0, PCAL6408A_OUTPUT_PORT
+        mov %1, %output_port
+        pack8 %0, 2
+        i2c_wrr %0, 2, STOP
+
+        cst8 %0, PCAL6408A_DIR_IN
+        mov %1, %dir_in
         pack8 %0, 2
         i2c_wrr %0, 2, STOP
 
@@ -52,7 +62,6 @@
 .func pcal6408a_set_output
         .export pcal6408a_set_output
         .clobber %0, %1
-        .input %11 output_port
 
         cst8 %0, PCAL6408A_OUTPUT_PORT
         mov %1, %output_port
@@ -62,56 +71,101 @@
         end
 .endfunc
 
-.func pcal6408a_get_input
-        .export pcal6408a_get_input
-        .output %0
+.func pcal6408a_irq_handle
+        .export pcal6408a_irq_handle
+        .clobber %0
+
+// again:
+        cst8 %0, PCAL6408A_INTERRUPT_STATUS
+        pack8 %0, 1
+        i2c_wrr %0, 1, RESTART
+        i2c_rdr %irq_status, 1, STOP
+        unpack8 %irq_status, 1
+
+        REG_SET(%0, PCAL6408A_INTERRUPT_STATUS, 0xff)
 
         cst8 %0, PCAL6408A_INPUT_PORT
         pack8 %0, 1
         i2c_wrr %0, 1, RESTART
-        i2c_rdr %0, 1, STOP
-        unpack8 %0, 1
+        i2c_rdr %input_port, 1, STOP
+        unpack8 %input_port, 1
+
+//        i2c_gpioget 0, %0
+//        eq0 %0
+//         jmp8 again
 
         end
 .endfunc
 
-.func pcal6408a_until
-        .export pcal6408a_until
-        .clobber %1
-        .input %12 mask
-        .output %0 current
+.func pcal6408a_get_input
+        .export pcal6408a_get_input
+        .clobber %0
 
-        cst8 %0, PCAL6408A_INTERRUPT_DISABLE
-        mov %1, %mask
+        cst8 %0, PCAL6408A_INTERRUPT_STATUS
+        pack8 %0, 1
+        i2c_wrr %0, 1, RESTART
+        i2c_rdr %irq_status, 1, STOP
+        unpack8 %irq_status, 1
+
+        REG_SET(%0, PCAL6408A_INTERRUPT_STATUS, 0xff)
+
+        cst8 %0, PCAL6408A_INPUT_PORT
+        pack8 %0, 1
+        i2c_wrr %0, 1, RESTART
+        i2c_rdr %input_port, 1, STOP
+        unpack8 %input_port, 1
+
+        end
+.endfunc
+
+.func pcal6408a_irq_src_update
+        .export pcal6408a_irq_src_update
+        .clobber %1, %0
+
+        cst8 %0, PCAL6408A_IRQ_DISABLE
+        mov %1, %input_monitor
         not32 %1
         pack8 %0, 2
         i2c_wrr %0, 2, STOP
+
+        cst8 %0, PCAL6408A_INPUT_LATCH_EN
+        mov %1, %input_monitor
+        pack8 %0, 2
+        i2c_wrr %0, 2, STOP
+
+        cst8 %0, PCAL6408A_DIR_IN
+        mov %1, %dir_in
+        pack8 %0, 2
+        i2c_wrr %0, 2, STOP
+
+        cst8 %0, PCAL6408A_INTERRUPT_STATUS
+        pack8 %0, 1
+        i2c_wrr %0, 1, RESTART
+        i2c_rdr %irq_status, 1, STOP
+        unpack8 %irq_status, 1
+
+        REG_SET(%0, PCAL6408A_INTERRUPT_STATUS, 0xff)
+
         cst8 %0, PCAL6408A_INPUT_PORT
         pack8 %0, 1
         i2c_wrr %0, 1, RESTART
-        i2c_rdr %0, 1, STOP
-        unpack8 %0, 1
+        i2c_rdr %input_port, 1, STOP
+        unpack8 %input_port, 1
 
         end
 .endfunc
-
-#define REG_SET(reg, value) \
-    cst16 %0, (reg) | ((value) << 8), 0 ; \
-    pack16le %0, 1, 2 ; \
-    i2c_wrr %0, 2, STOP
 
 .func pcal6408a_reset
         .export pcal6408a_reset
         .clobber %0
 
-        REG_SET(PCAL6408A_INTERRUPT_DISABLE, 0xff)
-        REG_SET(PCAL6408A_INPUT_DIRECTION, 0xff)
-        REG_SET(PCAL6408A_OUTPUT_PORT, 0xff)
-        REG_SET(PCAL6408A_POLARITY_INVERSION, 0)
-        REG_SET(PCAL6408A_INPUT_LATCH, 0)
-        REG_SET(PCAL6408A_PULL_ENABLE, 0)
-        REG_SET(PCAL6408A_PULL_UP, 0)
-        REG_SET(PCAL6408A_INTERRUPT_DISABLE, 0xff)
+        REG_SET(%0, PCAL6408A_IRQ_DISABLE, 0xff)
+        REG_SET(%0, PCAL6408A_DIR_IN, 0xff)
+        REG_SET(%0, PCAL6408A_OUTPUT_PORT, 0xff)
+        REG_SET(%0, PCAL6408A_POLARITY_INVERSION, 0)
+        REG_SET(%0, PCAL6408A_INPUT_LATCH_EN, 0)
+        REG_SET(%0, PCAL6408A_PULL_ENABLE, 0)
+        REG_SET(%0, PCAL6408A_PULL_UP, 0)
 
         end
 .endfunc
