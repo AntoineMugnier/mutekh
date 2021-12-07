@@ -115,7 +115,7 @@ C_HEADER_BEGIN
     in @tt value */
 #define BIT_INSERT(value, ins, index, count)            \
   (((value) & ~bit_mask(index, count))                 \
-   |(((ind) << (index)) & bit_mask(index, count)))
+   |(((ins) << (index)) & bit_mask(index, count)))
 
 #define __BIT_FUNC_GEN(n, l)                                          \
 /** @internal */                                                      \
@@ -520,6 +520,62 @@ ALWAYS_INLINE uint_fast8_t cpu_bit_popc64(uint64_t _x)
                     __builtin_choose_expr(sizeof(x) == 2, bit_popc16(x), \
                     __builtin_choose_expr(sizeof(x) == 4, bit_popc32(x), \
                                                           bit_popc64(x))))
+
+/**
+   @this sets a given bit index in a bit string. There is no
+   boundary check in the bit string.
+ */
+ALWAYS_INLINE
+void bitstring_set(uint8_t *bitstring, reg_t index)
+{
+  bitstring[index >> 3] |= (1 << (index & 7));
+}
+
+/**
+   @this clears a given bit index in a bit string. There is no
+   boundary check in the bit string.
+ */
+
+ALWAYS_INLINE
+void bitstring_clear(uint8_t *bitstring, reg_t index)
+{
+  bitstring[index >> 3] &= ~(1 << (index & 7));
+}
+
+/**
+   @this clears or set a given bit index in a bit string depending on
+   argument. There is no boundary check in the bit string.
+ */
+
+ALWAYS_INLINE
+void bitstring_set_value(uint8_t *bitstring, reg_t index, bool_t value)
+{
+  if (value)
+    bitstring_set(bitstring, index);
+  else
+    bitstring_clear(bitstring, index);
+}
+
+/**
+   @this retrieves a bit at a given bit index in a bit string.
+ */
+ALWAYS_INLINE
+bool_t bitstring_get(const uint8_t *bitstring, reg_t index)
+{
+  return bit_get(bitstring[index >> 3], index & 7);
+}
+
+/**
+   @this sets at most 32 unaligned bits in a bit string. There is no
+   boundary check in the bit string.
+ */
+void bitstring_set32(uint8_t *bitstring, reg_t index, reg_t width, uint32_t value);
+
+/**
+   @this retrieves at most 32 unaligned bits in a bit string. There is no
+   boundary check in the bit string.
+ */
+uint32_t bitstring_get32(const uint8_t *bitstring, reg_t index, reg_t width);
 
 C_HEADER_END
 
