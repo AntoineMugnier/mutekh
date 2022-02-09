@@ -528,6 +528,8 @@ static DEV_BITBANG_CANCEL(efm32_bitbang_cancel)
           case DEV_BITBANG_WRITE_RISE:
             break;
 #endif
+          default:
+            UNREACHABLE();
         }
     }
   else if (rq->base.drvdata == pv)
