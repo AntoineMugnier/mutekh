@@ -193,6 +193,8 @@ bitbang_tx_end_state(uintptr_t addr, uint32_t old,
     case DEV_BITBANG_WRITE_FALL:
       cpu_mem_write_32(addr, old & ~EFM32_TIMER_CC_CTRL_COIST);
       break;
+    default:
+      UNREACHABLE();
     }
 }
 
@@ -526,6 +528,8 @@ static DEV_BITBANG_CANCEL(efm32_bitbang_cancel)
           case DEV_BITBANG_WRITE_RISE:
             break;
 #endif
+          default:
+            UNREACHABLE();
         }
     }
   else if (rq->base.drvdata == pv)
