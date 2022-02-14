@@ -58,7 +58,7 @@
         spi_rd                  %tmp,                   3,      CS_END
         unpack32le              %tmp,                   1,      3
         extz                    %tmp,                   15
-        cst32                   %id,                    0x4400 | CONFIG_DRIVER_RFPACKET_SI446X_CHIPREV,       0
+        cst16                   %id,                    0x4400 | CONFIG_DRIVER_RFPACKET_SI446X_CHIPREV,       0
         neq                     %tmp,                   %id
           abort
   patch_loop:
@@ -178,7 +178,7 @@ tune_done:
         spi_wr                  %11,                    1,    CS_PULSE
         // Wait CTS
         call16                  %wait_cts:link,        wait_cts
-        cst32                   %10,                    SI446X_READ_BUFF_CMD,      0
+        cst8                    %10,                    SI446X_READ_BUFF_CMD
         pack32le                %10,                    1,           3
         spi_swp                 %10,                    %10,         3,    CS_END
         unpack32le              %10,                    1,           3
@@ -224,7 +224,7 @@ tune_done:
         .input %0 mode /* TX immediate or update */
         .input %3 channel
         .clobber %0 tmp, %5 cmd, %6 size, %11, %12, %13
-        cst32                   %cmd,            SI446X_START_TX_CMD,   0
+        cst8                    %cmd,            SI446X_START_TX_CMD
         or32                    %cmd,            %mode
         mov                     %6,              %channel
         shi32l                  %6,              8
@@ -313,7 +313,7 @@ tune_done:
         .input %1 state  /** RX timeout state  */
         .input %3 channel
         .clobber %0, %1, %3, %11, %12, %13
-        cst32                   %0,              SI446X_START_RX_CMD,   0
+        cst8                    %0,              SI446X_START_RX_CMD
         shi32l                  %channel,        8
         or32                    %0,              %channel
         pack32le                %0,              2,     6
@@ -392,7 +392,7 @@ tune_done:
         shi32l                  %get_status_and_rssi:current,        8
         ld32e                   %old,                     %R_CTX_PV,   _offsetof(si446x_ctx_s, rssi, 4)
   rssi_compute:
-        cst32                   %tmp,                     SI446X_RSSI_AVERAGE_WINDOW_SIZE - 1,  0
+        cst8                    %tmp,                     SI446X_RSSI_AVERAGE_WINDOW_SIZE - 1
         mul32                   %old,                     %tmp
         add                     %new,                     %get_status_and_rssi:current,
         shi32r                  %new,                     SI446X_RSSI_AVERAGE_LOG2_WINDOW_SIZE
@@ -634,7 +634,7 @@ tx_cca_retry_start:
         call16                  %set_rssi_control:link,   set_rssi_control
         // Start RX
         mov                     %si446x_start_rx:channel, %channel
-        cst32                   %si446x_start_rx:state,   0x7,    8
+        cst16                   %si446x_start_rx:state,   0x7,    8
         call16                  %si446x_start_rx:link,    si446x_start_rx
         // Wait for latch
         ld32e                   %0,                       %R_CTX_PV,   _offsetof(si446x_ctx_s, ccad, 4)
@@ -699,7 +699,7 @@ tx_cca_retry_start:
         cst8                    %tmp,                   SI446X_PACKET_INFO_CMD
         pack8                   %tmp,                   1
         spi_wr                  %tmp,                   1,    CS_PULSE
-        cst32                   %10,                    SI446X_READ_BUFF_CMD,      0
+        cst8                    %10,                    SI446X_READ_BUFF_CMD
         pack32le                %10,                    1,           4
         spi_swp                 %10,                    %10,         4,    CS_END
         unpack32be              %10,                    1,           4
@@ -872,7 +872,7 @@ tx_cca_retry_start:
         // Wait CTS
         call16                  %wait_cts:link,          wait_cts
         // Send read buff comd + 4 padding bytes
-        cst32                   %0,                    SI446X_READ_BUFF_CMD,    0
+        cst8                    %0,                    SI446X_READ_BUFF_CMD
         cst32                   %1,                    0,           0
         pack32le                %0,                    2,           5
         spi_swp                 %0,                    %0,          5,    CS_END
@@ -914,11 +914,11 @@ tx_cca_retry_start:
         call16                  %update_packet:link,    update_packet
         jmp16                   transfer_ongoing
   process_irq:
-        cst32                   %0,                     STATUS_RX_IRQ_MSK,      0
+        cst16                   %0,                     STATUS_RX_IRQ_MSK,      0
         and32                   %0,                     %STATUS
         neq0                    %0
           jmp8                  process_rx_irq
-        cst32                   %0,                     STATUS_TX_IRQ_MSK,      0
+        cst16                   %0,                     STATUS_TX_IRQ_MSK,      0
         and32                   %0,                     %STATUS
         neq0                    %0
           jmp8                  process_tx_irq
@@ -1037,7 +1037,7 @@ poll_cts_loop:
         // Wait CTS
         call16                  %wait_cts:link,          wait_cts
         // Send read buff command + 9 padding bytes
-        cst32                   %0,                    SI446X_READ_BUFF_CMD,   0
+        cst8                    %0,                    SI446X_READ_BUFF_CMD
         cst32                   %1,                    0,      0
         cst32                   %2,                    0,      0
         pack32le                %0,                    3,      10
