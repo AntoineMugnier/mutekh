@@ -128,11 +128,13 @@ struct ble_uuid_s
  */
 #define BLE_UUID_BT_BASED(x) BLE_UUID(x, 0, 0x1000, 0x8000, 0x805f9b34fbULL)
 
+#define BLE_UUID_TO_P(x) (&(const struct ble_uuid_s)x)
+
 /**
    @this is an shorthand initializer for a UUID object @strong
    pointer.
  */
-#define BLE_UUID_P(a, b, c, d, e) (&(const struct ble_uuid_s)BLE_UUID(a, b, c, d, e))
+#define BLE_UUID_P(a, b, c, d, e) BLE_UUID_TO_P(BLE_UUID(a, b, c, d, e))
 
 /**
    @this is an shorthand initializer for a Bluetooth-based UUID
@@ -146,7 +148,7 @@ struct ble_uuid_s
 
    @see ble_uuid_bluetooth_based
  */
-#define BLE_UUID_BT_BASED_P(x) (&(const struct ble_uuid_s)BLE_UUID_BT_BASED(x))
+#define BLE_UUID_BT_BASED_P(x) BLE_UUID_TO_P(BLE_UUID_BT_BASED(x))
 
 /**
    @this is a format string for printing a UUID.  It should be used

@@ -28,15 +28,15 @@
 #include <net/scheduler.h>
 
 #include <ble/net/gap.h>
-#include <ble/protocol/signalling.h>
+#include <ble/protocol/signaling.h>
 #include <ble/protocol/l2cap.h>
 
 #include <ble/net/generic.h>
 
-struct ble_signalling_handler_s;
+struct ble_signaling_handler_s;
 
 /**
- BLE L2CAP signalling layer.
+ BLE L2CAP signaling layer.
 
  Handles optional/advanced features of BLE connections:
  - Disconnection requests,
@@ -44,7 +44,7 @@ struct ble_signalling_handler_s;
  - Credit-based connection flow control,
  - Ping.
  */
-struct ble_signalling_s
+struct ble_signaling_s
 {
   struct net_layer_s layer;
   struct net_task_s *pending_conn_params;
@@ -52,12 +52,12 @@ struct ble_signalling_s
   uint8_t identifier;
 };
 
-STRUCT_COMPOSE(ble_signalling_s, layer);
+STRUCT_COMPOSE(ble_signaling_s, layer);
 
 static
 void ble_sig_destroyed(struct net_layer_s *layer)
 {
-  struct ble_signalling_s *sig = ble_signalling_s_from_layer(layer);
+  struct ble_signaling_s *sig = ble_signaling_s_from_layer(layer);
 
   if (sig->pending_conn_params)
     net_task_destroy(sig->pending_conn_params);
@@ -65,7 +65,7 @@ void ble_sig_destroyed(struct net_layer_s *layer)
   mem_free(sig);
 }
 
-static void sig_command_handle(struct ble_signalling_s *sig, struct net_task_s *task)
+static void sig_command_handle(struct ble_signaling_s *sig, struct net_task_s *task)
 {
   const uint8_t *data = task->packet.buffer->data + task->packet.buffer->begin;
   const size_t size = task->packet.buffer->end - task->packet.buffer->begin;
@@ -110,7 +110,7 @@ static void sig_command_handle(struct ble_signalling_s *sig, struct net_task_s *
 
 static
 uint8_t sig_pkt_send(
-  struct ble_signalling_s *sig,
+  struct ble_signaling_s *sig,
   struct buffer_s *pkt,
   uint8_t command)
 {
@@ -144,7 +144,7 @@ static
 void ble_sig_task_handle(struct net_layer_s *layer,
                          struct net_task_s *task)
 {
-  struct ble_signalling_s *sig = ble_signalling_s_from_layer(layer);
+  struct ble_signaling_s *sig = ble_signaling_s_from_layer(layer);
 
   switch (task->type) {
   default:
@@ -193,9 +193,9 @@ void ble_sig_task_handle(struct net_layer_s *layer,
 }
 
 static
-void ble_sig_dandling(struct net_layer_s *layer)
+void ble_sig_dangling(struct net_layer_s *layer)
 {
-  struct ble_signalling_s *sig = ble_signalling_s_from_layer(layer);
+  struct ble_signaling_s *sig = ble_signaling_s_from_layer(layer);
 
   if (sig->pending_conn_params) {
     net_task_query_respond_push(sig->pending_conn_params, -EIO);
@@ -206,15 +206,15 @@ void ble_sig_dandling(struct net_layer_s *layer)
 static const struct net_layer_handler_s sig_handler = {
   .destroyed = ble_sig_destroyed,
   .task_handle = ble_sig_task_handle,
-  .dandling = ble_sig_dandling,
+  .dangling = ble_sig_dangling,
 };
 
-error_t ble_signalling_create(struct net_scheduler_s *scheduler,
+error_t ble_signaling_create(struct net_scheduler_s *scheduler,
                               void *delegate,
                               const struct net_layer_delegate_vtable_s *delegate_vtable,
                               struct net_layer_s **layer)
 {
- struct ble_signalling_s *sig = mem_alloc(sizeof(*sig), mem_scope_sys);
+ struct ble_signaling_s *sig = mem_alloc(sizeof(*sig), mem_scope_sys);
 
   if (!sig)
     return -ENOMEM;

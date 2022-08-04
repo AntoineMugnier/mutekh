@@ -79,6 +79,7 @@ struct nrf5x_ble_master_s
   enum ble_phy_mode_e phy;
   bool_t established : 1;
   bool_t peer_md : 1;
+  bool_t last_useful : 1;
   bool_t event_done : 1;
   bool_t nesn : 1;
   bool_t sn : 1;
@@ -448,6 +449,7 @@ static bool_t master_ctx_event_opened(struct nrf5x_ble_context_s *context)
     return 0;
 
   master->opened = 1;
+  master->last_useful = 0;
   master->event_acked_count = 0;
   master->event_tx_count = 0;
   master->event_rx_count = 0;
@@ -535,7 +537,8 @@ bool_t master_ctx_radio_params(struct nrf5x_ble_context_s *context,
   return master->event_packet_count < 2
     || master->tx_queue_count
     || master->empty_first
-    || master->peer_md;
+    || master->peer_md
+    || master->last_useful;
 }
 
 static
@@ -570,12 +573,14 @@ uint8_t *master_ctx_payload_get(struct nrf5x_ble_context_s *context,
     master->empty[0] = BLE_LL_DATA_CONT;
     master->empty[1] = 0;
     data = master->empty;
-    md = !!master->tx_queue_count;
+    md = !!master->tx_queue_count || master->last_useful;
+    master->last_useful = 0;
   } else {
     packet = buffer_queue_head(&master->tx_queue);
     data = packet->data + packet->begin;
     buffer_refdec(packet);
-    md = master->tx_queue_count > 1;
+    md = 1;
+    master->last_useful = 1;
   }
 
   data[0] = (data[0] & 0x3)

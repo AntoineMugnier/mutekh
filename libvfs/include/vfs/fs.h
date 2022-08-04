@@ -280,7 +280,7 @@ typedef VFS_FS_MOVE(vfs_fs_move_t);
 
 /**
    This function removes a node from the file system.  Node may still be
-   referenced or open, and may become a dandling anonymous file.
+   referenced or open, and may become a dangling anonymous file.
 
    @param parent Directory node where to unlink a child
    @param name Name of child to unlink, it may not end with @tt '\0'.

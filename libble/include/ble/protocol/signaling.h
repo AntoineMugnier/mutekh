@@ -27,7 +27,7 @@
    @short Protocol definitions for L2CAP Signalling layer
  */
 
-enum ble_signalling_command
+enum ble_signaling_command
 {
   BLE_SIGNALLING_COMMAND_REJ = 0x01,
   BLE_SIGNALLING_DISCONNECT_REQ = 0x06,

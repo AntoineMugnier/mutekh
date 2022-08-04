@@ -76,14 +76,14 @@ struct vfs_node_s
     enum vfs_node_type_e type;
 
     /** Name of the node in its parent directory structure.  Anonymous
-        (dandling) nodes should not have any name.  Any unused
+        (dangling) nodes should not have any name.  Any unused
         characters in the name should be filled with @tt '\0' */
     char name[CONFIG_VFS_NAMELEN];
 
     /** @internal
         Parent node.
 
-        Root has its own pointer here, dandling nodes have NULL.
+        Root has its own pointer here, dangling nodes have NULL.
 
         Accesses to this value must be protected for atomicity with
         @tt parent_lock.

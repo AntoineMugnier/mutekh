@@ -31,6 +31,7 @@
 
 #include <device/device.h>
 #include <device/resources.h>
+#include <device/request.h>
 #include <device/driver.h>
 #include <device/irq.h>
 #include <device/class/iomux.h>
@@ -44,10 +45,10 @@
 
 #define PPI(x, y) (CONFIG_DRIVER_NRF5X_GPIO_PWM_PPI_FIRST + (x) * 2 + (y))
 
-DRIVER_PV(struct nrf5x_gpio_pwm_context_s
+
+struct nrf5x_gpio_pwm_context_s
 {
   uintptr_t timer_addr;
-  struct dev_request_dlqueue_s queue;
   bool_t running : 1;
   bool_t updated : 1;
   uint8_t use_count;
@@ -71,7 +72,9 @@ DRIVER_PV(struct nrf5x_gpio_pwm_context_s
     uint32_t toggle_tk;
     uint32_t gpiote_config;
   } channel[CONFIG_DRIVER_NRF5X_GPIO_PWM_CHANNEL_COUNT];
-});
+};
+
+DRIVER_PV(struct nrf5x_gpio_pwm_context_s);
 
 #define OVERFLOW 3
 #define GPIOTE_ID(x) (CONFIG_DRIVER_NRF5X_GPIO_PWM_TE_FIRST + (x))
@@ -80,91 +83,106 @@ DRIVER_PV(struct nrf5x_gpio_pwm_context_s
 
 static void nrf5x_gpio_pwm_update(struct nrf5x_gpio_pwm_context_s *pv, bool_t sync);
 
-static DEV_REQUEST_DELAYED_FUNC(nrf5x_gpio_pwm_setup)
+static
+error_t nrf5x_pwm_config_apply(struct nrf5x_gpio_pwm_context_s *pv,
+                               const struct dev_pwm_config_s *cfg_table,
+                               size_t cfg_count)
 {
-  struct dev_pwm_rq_s *rq = dev_pwm_rq_s_cast(rq_);
-  struct device_s *dev = accessor->dev;
-  struct nrf5x_gpio_pwm_context_s *pv = dev->drv_pv;
   bool_t freq_changed = 0;
+  uint32_t period_tk = pv->period_tk;
+  uint32_t prescaler_log2 = pv->prescaler_log2;
+  struct dev_freq_s freq = pv->freq;
   uint32_t duty_changed = 0;
 
-  if (!rq->chan_mask)
-    return dev_request_delayed_end(&pv->queue, rq_);
+  for (size_t idx = 0; idx < cfg_count; ++idx) {
+    const struct dev_pwm_config_s *cfg = cfg_table + idx;
 
-  rq->error = -ENOTSUP;
-
-  for (uint8_t i = 0; i < CONFIG_DRIVER_NRF5X_GPIO_PWM_CHANNEL_COUNT; ++i) {
-    if (!((rq->chan_mask >> i) & 1))
-      continue;
-
-    const struct dev_pwm_config_s *cfg = rq->cfg + i;
-
-    logk_debug("PWM config %d update f=%d/%d, duty=%d/%d, pol=%d\n",
-               i, (int)cfg->freq.num, (int)cfg->freq.denom,
-               (int)cfg->duty.num, (int)cfg->duty.denom,
-               cfg->pol);
-
-    if (rq->mask & DEV_PWM_MASK_FREQ) {
-      if (freq_changed) {
-        if (memcmp(&pv->freq, &cfg->freq, sizeof(cfg->freq))) {
-          logk_error("Multiple channels with different freqs: [%d]: %d/%d %P %P\n",
-                     i, (int)cfg->freq.num, (int)cfg->freq.denom,
-                     &pv->freq, sizeof(pv->freq),
-                     &cfg->freq, sizeof(cfg->freq));
-          rq->error = -EINVAL;
-          return dev_request_delayed_end(&pv->queue, rq_);
-        }
+    for (uint8_t i = 0; i < CONFIG_DRIVER_NRF5X_GPIO_PWM_CHANNEL_COUNT; ++i) {
+      if (!((cfg->chan_mask >> i) & 1))
         continue;
+
+      logk_debug("PWM cfg %d chan mask %x mask %x update f=%d/%d, duty=%d/%d, pol=%d\n",
+                 idx, cfg->chan_mask, cfg->param_mask,
+                 (int)cfg->freq.num, (int)cfg->freq.denom,
+                 (int)cfg->duty.num, (int)cfg->duty.denom,
+                 cfg->pol);
+
+      if (cfg->param_mask & DEV_PWM_MASK_FREQ) {
+        if (freq_changed) {
+          if (memcmp(&freq, &cfg->freq, sizeof(cfg->freq))) {
+            logk_error("Multiple channels with different freqs: [%d]: %d/%d %P %P\n",
+                       i, (int)cfg->freq.num, (int)cfg->freq.denom,
+                       &freq, sizeof(freq),
+                       &cfg->freq, sizeof(cfg->freq));
+            return -EINVAL;
+          }
+        }
+
+        freq = cfg->freq;
+        freq_changed = 1;
       }
+    }
+  }
 
-      pv->freq = cfg->freq;
+  if (freq_changed) {
+    const uint32_t wrap = (uint64_t)16000000 * (uint64_t)freq.denom / freq.num;
 
-      const uint32_t wrap = (uint64_t)16000000 * (uint64_t)pv->freq.denom / pv->freq.num;
+    if (wrap > (1 << (16 + 9))) {
+      logk_error("Wrap above counter max for freq %d/%d: %d\n",
+                 freq.num, freq.denom, wrap);
+      return -EINVAL;
+    }
+    prescaler_log2 = 0;
+    period_tk = wrap;
 
-      if (wrap > (1 << (16 + 9))) {
-        logk_error("Wrap above counter max for freq %d/%d: %d\n",
-                pv->freq.num, pv->freq.denom, wrap);
-        rq->error = -EINVAL;
-        return dev_request_delayed_end(&pv->queue, rq_);
-      }
-
-      freq_changed = 1;
-
-      pv->prescaler_log2 = 0;
-      pv->period_tk = wrap;
-
-      while (pv->period_tk > (1 << 16)
-             || (!(pv->period_tk & 1) && pv->prescaler_log2 < 4)) {
-        assert(pv->prescaler_log2 <= 9);
-        pv->prescaler_log2++;
-        pv->period_tk >>= 1;
-      }
-
-      duty_changed |= bit_mask(0, CONFIG_DRIVER_NRF5X_GPIO_PWM_CHANNEL_COUNT);
-
-      logk_debug("PWM period %d/%d: %d ticks, wraps at %d*2^-%d\n",
-             (uint32_t)pv->freq.num, (uint32_t)pv->freq.denom,
-             wrap, pv->period_tk, pv->prescaler_log2);
+    while (period_tk > (1 << 16)
+           || (!(period_tk & 1) && prescaler_log2 < 4)) {
+      assert(prescaler_log2 <= 9);
+      prescaler_log2++;
+      period_tk >>= 1;
     }
 
-    if (rq->mask & DEV_PWM_MASK_DUTY) {
-      duty_changed |= bit(i);
-      pv->channel[i].duty = cfg->duty;
-      logk_debug("PWM config: %04d/%05d\r",
-              (uint32_t)pv->channel[i].duty.num, (uint32_t)pv->channel[i].duty.denom);
-    }
+    logk_debug("PWM period %d/%d: %d ticks, wraps at %d*2^-%d\n",
+               (uint32_t)freq.num, (uint32_t)freq.denom,
+               wrap, period_tk, prescaler_log2);
 
-    if (rq->mask & DEV_PWM_MASK_POL) {
-      duty_changed |= bit(i);
-      pv->channel[i].gpio_init_val = cfg->pol == DEV_PWM_POL_HIGH ? 1 : 0;
+    duty_changed |= bit_mask(0, CONFIG_DRIVER_NRF5X_GPIO_PWM_CHANNEL_COUNT);
+
+    pv->period_tk = period_tk;
+    pv->prescaler_log2 = prescaler_log2;
+    pv->freq = freq;
+  }
+
+  for (size_t idx = 0; idx < cfg_count; ++idx) {
+    const struct dev_pwm_config_s *cfg = cfg_table + idx;
+
+    for (uint8_t i = 0; i < CONFIG_DRIVER_NRF5X_GPIO_PWM_CHANNEL_COUNT; ++i) {
+      logk_debug("PWM config %d iter %d mask %02x", idx, i, cfg->chan_mask);
+
+      if (!(cfg->chan_mask & bit(i)))
+        continue;
+
+      if (cfg->param_mask & DEV_PWM_MASK_DUTY) {
+        duty_changed |= bit(i);
+        pv->channel[i].duty = cfg->duty;
+        logk_debug("PWM config: %04d/%05d\r",
+                   (uint32_t)pv->channel[i].duty.num, (uint32_t)pv->channel[i].duty.denom);
+      }
+
+      if (cfg->param_mask & DEV_PWM_MASK_POL) {
+        duty_changed |= bit(i);
+        pv->channel[i].gpio_init_val = cfg->pol == DEV_PWM_POL_HIGH ? 1 : 0;
+      }
     }
   }
 
   pv->ppi_disable = pv->ppi_enable = 0;
 
   for (uint8_t i = 0; i < CONFIG_DRIVER_NRF5X_GPIO_PWM_CHANNEL_COUNT; ++i) {
-    if ((duty_changed >> i) & 1)
-      pv->channel[i].toggle_tk = pv->period_tk * pv->channel[i].duty.num / pv->channel[i].duty.denom;
+    if (duty_changed & bit(i))
+      pv->channel[i].toggle_tk = pv->period_tk
+        * pv->channel[i].duty.num
+        / pv->channel[i].duty.denom;
 
     uint32_t ppis = bit(PPI(i, 1)) | bit(PPI(i, 0));
     bool_t initval = pv->channel[i].gpio_init_val;
@@ -187,14 +205,12 @@ static DEV_REQUEST_DELAYED_FUNC(nrf5x_gpio_pwm_setup)
       | (initval ? NRF_GPIOTE_CONFIG_POLARITY_LOTOHI : NRF_GPIOTE_CONFIG_POLARITY_HITOLO);
 
     logk_debug("PWM config %d changes at %04d (%05d*%04d/%05d)\n",
-           i,
-           pv->channel[i].toggle_tk,
-           pv->period_tk, pv->channel[i].duty.num, pv->channel[i].duty.denom);
+               i,
+               pv->channel[i].toggle_tk,
+               pv->period_tk, pv->channel[i].duty.num, pv->channel[i].duty.denom);
   }
 
   CPU_INTERRUPT_SAVESTATE_DISABLE;
-  assert(!pv->rq);
-  pv->rq = rq;
   pv->updated = 0;
 
   if (pv->running) {
@@ -213,19 +229,14 @@ static DEV_REQUEST_DELAYED_FUNC(nrf5x_gpio_pwm_setup)
     nrf5x_gpio_pwm_update(pv, 1);
   }
   CPU_INTERRUPT_RESTORESTATE;
+
+  return 0;
 }
 
 static void nrf5x_gpio_pwm_update(struct nrf5x_gpio_pwm_context_s *pv, bool_t sync)
 {
-  struct dev_pwm_rq_s *rq = pv->rq;
-
-  if (!rq)
-    return;
-
   if (!nrf_it_is_enabled(pv->timer_addr, NRF_TIMER_COMPARE(OVERFLOW)) && !sync)
     return;
-
-  pv->rq = NULL;
 
   pv->updated = 1;
 
@@ -272,9 +283,6 @@ static void nrf5x_gpio_pwm_update(struct nrf5x_gpio_pwm_context_s *pv, bool_t sy
     nrf_reg_set(pv->timer_addr, NRF_TIMER_PPI_GPIOTE, 0);
 #endif
   }
-
-  rq->error = 0;
-  dev_request_delayed_end(&pv->queue, &rq->base);
 }
 
 static DEV_IRQ_SRC_PROCESS(nrf5x_gpio_pwm_irq)
@@ -285,15 +293,12 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_gpio_pwm_irq)
   nrf5x_gpio_pwm_update(pv, 0);
 }
 
-static DEV_PWM_REQUEST(nrf5x_gpio_pwm_request)
+static DEV_PWM_CONFIG(nrf5x_gpio_pwm_config)
 {
   struct device_s *dev = pdev->dev;
   struct nrf5x_gpio_pwm_context_s *pv = dev->drv_pv;
 
-  rq->chan_mask <<= pdev->number;
-
-  dev_request_delayed_push(&pdev->base,
-                           &pv->queue, dev_pwm_rq_s_base(rq), 1);
+  return nrf5x_pwm_config_apply(pv, rq->cfg, rq->cfg_count);
 }
 
 /*
@@ -367,7 +372,6 @@ static DEV_INIT(nrf5x_gpio_pwm_init)
   nrf_reg_set(pv->timer_addr, NRF_TIMER_BITMODE, NRF_TIMER_BITMODE_16);
 
   nrf_it_disable_mask(pv->timer_addr, -1);
-  dev_request_delayed_init(&pv->queue, nrf5x_gpio_pwm_setup);
 
   nrf_reg_set(pv->timer_addr, NRF_TIMER_MODE, NRF_TIMER_MODE_TIMER);
   nrf_reg_set(pv->timer_addr, NRF_TIMER_CC(OVERFLOW), 0);
@@ -399,11 +403,6 @@ static DEV_INIT(nrf5x_gpio_pwm_init)
 static DEV_CLEANUP(nrf5x_gpio_pwm_cleanup)
 {
   struct nrf5x_gpio_pwm_context_s *pv = dev->drv_pv;
-
-  if (!dev_request_delayed_isidle(&pv->queue))
-    return -EBUSY;
-
-  dev_request_delayed_cleanup(&pv->queue);
 
   nrf_it_disable_mask(pv->timer_addr, -1);
   nrf_task_trigger(pv->timer_addr, NRF_TIMER_SHUTDOWN);

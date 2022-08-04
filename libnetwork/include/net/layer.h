@@ -103,7 +103,7 @@ struct net_layer_handler_s
      @this notifies a layer its got unbound and has no parent any
      more.  This method is optional.
    */
-  void (*dandling)(struct net_layer_s *layer);
+  void (*dangling)(struct net_layer_s *layer);
 
   /**
      @this is called when another layer is bound using this one as

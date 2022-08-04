@@ -553,7 +553,7 @@ static void fluke_gatt_client_context_changed(struct net_layer_s *layer)
     fluke_gatt_client_request(fluke);
 }
 
-static void fluke_gatt_client_dandling(struct net_layer_s *layer)
+static void fluke_gatt_client_dangling(struct net_layer_s *layer)
 {
   struct fluke_gatt_client_s *fluke = fluke_gatt_client_s_from_layer(layer);
 
@@ -572,7 +572,7 @@ static const struct fluke_gatt_client_handler_s fluke_handler = {
   .base.destroyed = fluke_gatt_client_destroyed,
   .base.task_handle = fluke_gatt_client_task_handle,
   .base.context_changed = fluke_gatt_client_context_changed,
-  .base.dandling = fluke_gatt_client_dandling,
+  .base.dangling = fluke_gatt_client_dangling,
 };
 
 error_t fluke_gatt_client_create(struct net_scheduler_s *scheduler,

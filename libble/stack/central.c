@@ -189,13 +189,19 @@ static error_t scan_start(struct ble_central_s *ctr)
   }
 
   if (ctr->scan) {
-    logk_error("Cannot scan: has scan");
+    logk_error("Scan already active %p", ctr->scan);
     return 0;
   }
 
   ctr->params.access_address = ble_stack_access_address_generate(ctr->context);
   dev_rng_wait_read(&ctr->context->rng, &ctr->params.crc_init, 4);
+  // 6.B.2.3.3.1: It shall have a random value in the range 5 to 16.
+  ctr->params.hop = ((ctr->params.crc_init >> 24) & 0xf) + 5;
   ctr->params.crc_init &= 0xffffff;
+  ctr->params.channel_map = (1ull << 37) - 1;
+
+  logk("Using access address %08x, crcinit %06x, hop %d",
+       ctr->params.access_address, ctr->params.crc_init, ctr->params.hop);
 
   ble_stack_context_local_address_get(ctr->context, &ctr->params.local_addr);
 
@@ -290,6 +296,18 @@ static void ctr_scan_destroyed(void *delegate, struct net_layer_s *layer)
   ctr_state_update(ctr);
 }
 
+static void ctr_scan_filter_destroyed(void *delegate, struct net_layer_s *layer)
+{
+  struct ble_central_s *ctr = delegate;
+
+  logk_debug("Scan filter layer %p ctr->scan_filter %p destroyed", layer, ctr->scan_filter);
+  
+  if (layer == ctr->scan_filter)
+    ctr->scan_filter = NULL;
+  
+  ctr_state_update(ctr);
+}
+
 static const struct ble_scanner_delegate_vtable_s ctr_scan_vtable =
 {
   .base.release = ctr_scan_destroyed,
@@ -339,7 +357,7 @@ enum ble_scan_filter_policy_e central_device_updated(void *delegate, struct net_
 
 static const struct ble_scan_filter_delegate_vtable_s central_scan_filter_vtable =
 {
-  .base.release = ctr_scan_destroyed,
+  .base.release = ctr_scan_filter_destroyed,
   .device_updated = central_device_updated,
 };
 

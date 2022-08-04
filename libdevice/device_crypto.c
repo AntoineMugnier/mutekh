@@ -83,7 +83,7 @@ error_t dev_rng_wait_read(struct dev_rng_s *rng, void *data, size_t size)
   };
   struct dev_crypto_rq_s rq = {
     .ctx = &ctx,
-    .op = DEV_CRYPTO_INIT | DEV_CRYPTO_FINALIZE,
+    .op = DEV_CRYPTO_FINALIZE,
     .out = data,
     .len = size,
   };
@@ -99,7 +99,7 @@ error_t dev_rng_wait_seed(struct dev_rng_s *rng, const void *data, size_t size)
   };
   struct dev_crypto_rq_s rq = {
     .ctx = &ctx,
-    .op = DEV_CRYPTO_INIT | DEV_CRYPTO_INVERSE,
+    .op = DEV_CRYPTO_INVERSE,
     .ad_len = size,
     .ad = data,
   };

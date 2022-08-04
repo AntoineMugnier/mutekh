@@ -51,6 +51,7 @@ struct bs_context_s
   uint8_t cur[8];
 
   bool_t busy;
+  uint8_t init_idx;
   uint8_t state_size;
 };
 
@@ -111,6 +112,38 @@ static void bs_gpio_wait(struct device_s *dev)
   DEVICE_OP(&pv->gpio, request, &pv->gpio_rq);
 }
 
+static
+error_t bs_gpio_init_next(struct bs_context_s *pv)
+{
+  uint64_t mask = endian_le64_na_load(pv->mask);
+  mask &= ~bit_mask(0, pv->init_idx);
+
+  if (!mask)
+    return -ENOENT;
+
+  uint8_t b = bit_ctz64(mask);
+
+  if (bit_get(pv->pull, b)) {
+    if (bit_get(pv->active_high, b)) {
+      pv->gpio_rq.mode.mode = DEV_PIN_INPUT_PULLDOWN;
+    } else {
+      pv->gpio_rq.mode.mode = DEV_PIN_INPUT_PULLUP;
+    }
+  } else {
+    pv->gpio_rq.mode.mode = DEV_PIN_INPUT;
+  }
+
+  pv->gpio_rq.mode.mask = dev_gpio_mask1;
+  pv->gpio_rq.type = DEV_GPIO_MODE;
+
+  pv->init_idx++;
+
+  pv->busy = 1;
+  DEVICE_OP(&pv->gpio, request, &pv->gpio_rq);
+
+  return 0;
+}
+
 static KROUTINE_EXEC(bs_gpio_done)
 {
   struct bs_context_s *pv = KROUTINE_CONTAINER(kr, *pv, gpio_rq.base.kr);
@@ -123,7 +156,7 @@ static KROUTINE_EXEC(bs_gpio_done)
   switch (pv->gpio_rq.type) {
   default:
   case DEV_GPIO_MODE:
-    if (dev_rq_queue_isempty(&pv->queue))
+    if (!bs_gpio_init_next(pv))
       break;
 
   case DEV_GPIO_GET_INPUT:
@@ -215,7 +248,6 @@ static DEV_INIT(button_set_init)
   uintptr_t tmp;
   gpio_id_t id;
   gpio_width_t width;
-  uint8_t button = 0;
 
   pv = mem_alloc(sizeof(*pv), mem_scope_sys);
   if (!pv)
@@ -262,39 +294,18 @@ static DEV_INIT(button_set_init)
   else
     pv->pull = -1;
 
-  while (mask) {
-    uint8_t b = bit_ctz64(mask);
-
-    if (bit_get(pv->pull, b)) {
-      if (bit_get(pv->active_high, b)) {
-        dev_gpio_mode(&pv->gpio, id + b, DEV_PIN_INPUT_PULLDOWN);
-      } else {
-        dev_gpio_mode(&pv->gpio, id + b, DEV_PIN_INPUT_PULLUP);
-      }
-    } else {
-        dev_gpio_mode(&pv->gpio, id + b, DEV_PIN_INPUT);
-    }
-    
-    button++;
-    BIT_CLEAR(mask, b);
-  }
-
-  pv->gpio_rq.pvdata = dev;
-  pv->gpio_rq.io_first = id;
-  pv->gpio_rq.io_last = id + width - 1;
-  pv->gpio_rq.mode.mask = pv->mask;
-  pv->gpio_rq.type = DEV_GPIO_GET_INPUT;
-//  pv->gpio_rq.mode.mode = pv->active_high ? DEV_PIN_INPUT_PULLDOWN : DEV_PIN_INPUT_PULLUP;
-
-  dev_gpio_rq_init(&pv->gpio_rq, bs_gpio_done);
+  pv->init_idx = 0;
 
   pv->busy = 0;
 
-  endian_le64_na_store(pv->cur, pv->active_high);
-//  memset(pv->cur, pv->active_high ? 0 : 0xff, sizeof(pv->cur));
-//
-//  DEVICE_OP(&pv->gpio, request, &pv->gpio_rq);
+  endian_le64_na_store(pv->cur, mask);
 
+  dev_gpio_rq_init(&pv->gpio_rq, bs_gpio_done);
+  pv->gpio_rq.pvdata = dev;
+  pv->gpio_rq.io_first = id;
+  pv->gpio_rq.io_last = id + width - 1;
+  bs_gpio_init_next(pv);
+  
   return 0;
 
  put_gpio:
