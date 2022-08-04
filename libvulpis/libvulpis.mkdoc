@@ -1,0 +1,7 @@
+@moduledef{Sigfox protocol implementation} {Libraries}
+ @short Sigfox protocol implementation
+@end moduledef
+
+@parse{
+  vulpis/vulpis.h
+}

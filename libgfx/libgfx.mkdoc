@@ -1,0 +1,7 @@
+@moduledef{Lightweight 2d graphic} {Libraries}
+ @short Lightweight 2d graphic
+@end moduledef
+
+@parse{
+  gfx/arc.t gfx/blit.t gfx/bytecode.h gfx/circle.t gfx/gfx.t gfx/line.t gfx/math.h gfx/pixel.t gfx/rect.t
+}

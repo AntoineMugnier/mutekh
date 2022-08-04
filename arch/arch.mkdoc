@@ -15,3 +15,4 @@
 @include nrf5x/nrf5x.mkdoc
 @include psoc4/psoc4.mkdoc
 @include ibmpc/ibmpc.mkdoc
+@include realview-eb/realview-eb.mkdoc

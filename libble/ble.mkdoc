@@ -220,7 +220,6 @@ devices using this whole stack of protocols defined in @url
     ble/net/att.h
     ble/net/gap.h
     ble/net/gatt.h
-    ble/net/gattc.h
     ble/net/link.h
     ble/net/llcp.h
     ble/net/phy.h
