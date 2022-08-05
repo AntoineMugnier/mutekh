@@ -112,10 +112,15 @@ static void bitbang_process_next(struct efm32_bitbang_ctx_s *pv)
 {
   struct dev_bitbang_rq_s *rq = dev_bitbang_rq_head(&pv->queue);
 
-  if (rq == NULL || pv->running)
+ again:
+#ifdef CONFIG_DEVICE_CLOCK_GATING
+  if (!rq)
+    dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
+#endif
+
+  if (!rq || pv->running)
     return;
 
-  pv->running = 1;
   efm32_bitbang_freq(pv);
 
   switch(rq->type)
@@ -124,6 +129,7 @@ static void bitbang_process_next(struct efm32_bitbang_ctx_s *pv)
       case DEV_BITBANG_READ:
         pv->rx_ending = 0;
         efm32_bitbang_ctx_start_rx(pv, rq);
+        pv->running = 1;
         break; 
 #endif
 #ifdef CONFIG_DRIVER_EFM32_BITBANG_WRITE
@@ -131,6 +137,7 @@ static void bitbang_process_next(struct efm32_bitbang_ctx_s *pv)
       case DEV_BITBANG_WRITE_RISE:
       case DEV_BITBANG_WRITE_FALL:
         efm32_bitbang_ctx_start_tx(pv, rq);
+        pv->running = 1;
         break;
 #endif
       default:
@@ -139,7 +146,7 @@ static void bitbang_process_next(struct efm32_bitbang_ctx_s *pv)
         rq->base.drvdata = NULL;
         dev_bitbang_rq_pop(&pv->queue);
         dev_bitbang_rq_done(rq);
-        break;
+        goto again;
     }
 }
 
@@ -193,6 +200,8 @@ bitbang_tx_end_state(uintptr_t addr, uint32_t old,
     case DEV_BITBANG_WRITE_FALL:
       cpu_mem_write_32(addr, old & ~EFM32_TIMER_CC_CTRL_COIST);
       break;
+    default:
+      UNREACHABLE();
     }
 }
 
@@ -245,7 +254,7 @@ static void efm32_bitbang_ctx_start_tx(struct efm32_bitbang_ctx_s * __restrict__
   /* add some warm-up cycles so that the DMA is ready to feed
      samples. starting with short pulses is not handled properly when
      this is not done. */
-  cpu_mem_write_32(a + EFM32_TIMER_TOP_ADDR, 1024 >> pv->div);
+  cpu_mem_write_32(a + EFM32_TIMER_TOP_ADDR, 128);
 
   /* preload first sample so that we override the content of TOPB in
      case it was already marked as valid */
@@ -330,6 +339,9 @@ static void efm32_bitbang_end_rd_rq(struct efm32_bitbang_ctx_s *pv, error_t err,
 
   dev_bitbang_rq_pop(&pv->queue);
   dev_bitbang_rq_done(rq);
+
+  /* Process next request */
+  kroutine_exec(&pv->kr);
 }
 
 static DEV_DMA_CALLBACK(bitbang_rx_dma_done)
@@ -356,9 +368,6 @@ static DEV_DMA_CALLBACK(bitbang_rx_dma_done)
 
   /* Buffer overflow */
   efm32_bitbang_end_rd_rq(pv, -EIO, 0);
-
-  /* Process next request */
-  kroutine_exec(&pv->kr);
 
 end:
   LOCK_RELEASE_IRQ(&pv->dev->lock);
@@ -483,9 +492,6 @@ static DEV_IRQ_SRC_PROCESS(efm32_bitbang_irq_process)
   else
     efm32_bitbang_end_rd_rq(pv, 0, pv->dma_rq.cancel.size);
 
-  /* Request is terminated here */
-  bitbang_process_next(pv);
-
 end:
   lock_release(&dev->lock);
 }
@@ -515,9 +521,10 @@ static DEV_BITBANG_CANCEL(efm32_bitbang_cancel)
             err = efm32_bitbang_cancel_rx(pv);
             if (err)
               break;
+            pv->running = 0;
             rq->base.drvdata = NULL;
             dev_bitbang_rq_pop(&pv->queue);
-            bitbang_process_next(pv);
+            kroutine_exec(&pv->kr);
             break;
 #endif
 #ifdef CONFIG_DRIVER_EFM32_BITBANG_WRITE
@@ -526,6 +533,8 @@ static DEV_BITBANG_CANCEL(efm32_bitbang_cancel)
           case DEV_BITBANG_WRITE_RISE:
             break;
 #endif
+          default:
+            UNREACHABLE();
         }
     }
   else if (rq->base.drvdata == pv)
@@ -535,6 +544,11 @@ static DEV_BITBANG_CANCEL(efm32_bitbang_cancel)
       rq->base.drvdata = NULL;
       dev_bitbang_rq_remove(&pv->queue, rq);
     }
+
+#ifdef CONFIG_DEVICE_CLOCK_GATING
+  if (hrq && dev_rq_queue_isempty(&pv->queue))
+    dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
+#endif
 
   LOCK_RELEASE_IRQ(&dev->lock);
 
@@ -551,6 +565,11 @@ static DEV_BITBANG_REQUEST(efm32_bitbang_request)
 
   bool_t empty = dev_rq_queue_isempty(&pv->queue);
   dev_bitbang_rq_pushback(&pv->queue, rq);
+#ifdef CONFIG_DEVICE_CLOCK_GATING
+  if (empty)
+    dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER_CLOCK);
+#endif
+
   rq->base.drvdata = pv;
 
   if (empty /* && !pv->rx_ending */)
@@ -662,6 +681,10 @@ static DEV_INIT(efm32_bitbang_init)
 
   if (device_irq_source_link(dev, &pv->irq_ep, 1, -1))
     goto err_clk;
+#endif
+
+#ifdef CONFIG_DEVICE_CLOCK_GATING
+  dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
 #endif
 
   return 0;
