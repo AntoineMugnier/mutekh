@@ -50,7 +50,7 @@ struct ble_gap_params_s
 {
   /** A pointer to GATT DB exposed by device. */
   struct ble_gattdb_s *db;
-  /** A pointer to L2CAP signalling layer. */
+  /** A pointer to L2CAP signaling layer. */
   struct net_layer_s *sig;
 };
 

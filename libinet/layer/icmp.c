@@ -97,7 +97,7 @@ void inet_icmp_task_handle(struct net_layer_s *layer,
 }
 
 static
-void inet_icmp_dandling(struct net_layer_s *layer)
+void inet_icmp_dangling(struct net_layer_s *layer)
 {
   struct inet_icmp_s *icmp = inet_icmp_s_from_layer(layer);
 
@@ -107,7 +107,7 @@ void inet_icmp_dandling(struct net_layer_s *layer)
 static const struct net_layer_handler_s icmp_handler = {
   .destroyed = inet_icmp_destroyed,
   .task_handle = inet_icmp_task_handle,
-  .dandling = inet_icmp_dandling,
+  .dangling = inet_icmp_dangling,
 };
 
 error_t inet_icmp_create(struct net_scheduler_s *scheduler,

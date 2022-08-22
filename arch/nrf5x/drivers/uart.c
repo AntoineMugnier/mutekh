@@ -404,7 +404,7 @@ static DEV_VALIO_REQUEST(nrf5x_uart_valio_request)
     rq->error = nrf5x_uart_config(pv, rq->data);
   }
 
-  dev_char_rq_done(rq);
+  dev_valio_rq_done(rq);
 }
 
 #define nrf5x_uart_valio_cancel (dev_valio_cancel_t*)dev_driver_notsup_fcn

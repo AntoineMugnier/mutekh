@@ -183,4 +183,3 @@ void hexdumpk(uintptr_t address, const void *data, size_t len)
 }
 
 #endif
-

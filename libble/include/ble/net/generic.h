@@ -62,7 +62,7 @@ error_t ble_gatt_create(struct net_scheduler_s *scheduler,
                         const struct net_layer_delegate_vtable_s *delegate_vtable,
                         struct net_layer_s **layer);
 
-error_t ble_signalling_create(struct net_scheduler_s *scheduler,
+error_t ble_signaling_create(struct net_scheduler_s *scheduler,
                         void *delegate,
                         const struct net_layer_delegate_vtable_s *delegate_vtable,
                               struct net_layer_s **layer);

@@ -386,11 +386,11 @@ void ble_scan_filter_task_handle(struct net_layer_s *layer,
   net_task_destroy(task);
 }
 
-static void ble_scan_filter_dandling(struct net_layer_s *layer)
+static void ble_scan_filter_dangling(struct net_layer_s *layer)
 {
   struct ble_scan_filter_s *sf = ble_scan_filter_s_from_layer(layer);
 
-  logk_trace("Scan filter %p dandling", sf);
+  logk_trace("Scan filter %p dangling", sf);
 
   net_scheduler_from_layer_cancel(sf->layer.scheduler, &sf->layer);
 
@@ -403,7 +403,7 @@ static void ble_scan_filter_dandling(struct net_layer_s *layer)
 static const struct net_layer_handler_s scan_filter_handler = {
   .destroyed = ble_scan_filter_destroyed,
   .task_handle = ble_scan_filter_task_handle,
-  .dandling = ble_scan_filter_dandling,
+  .dangling = ble_scan_filter_dangling,
 };
 
 error_t ble_scan_filter_create(struct net_scheduler_s *scheduler,

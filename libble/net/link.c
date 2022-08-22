@@ -649,7 +649,7 @@ void ble_link_destroyed(struct net_layer_s *layer)
   mem_free(link);
 }
 
-static void ble_link_dandling(struct net_layer_s *layer)
+static void ble_link_dangling(struct net_layer_s *layer)
 {
   struct ble_link_s *link = ble_link_s_from_layer(layer);
 
@@ -662,7 +662,7 @@ static const struct net_layer_handler_s link_handler = {
   .bound = ble_link_bound,
   .unbound = ble_link_unbound,
   .child_context_adjust = ble_link_child_context_adjust,
-  .dandling = ble_link_dandling,
+  .dangling = ble_link_dangling,
 };
 
 error_t ble_link_create(struct net_scheduler_s *scheduler,

@@ -230,7 +230,7 @@ VFS_FS_LINK(ramfs_link)
 	vfs_printk("<%s %s ", __FUNCTION__, name);
 
     if (target_dir->parent == NULL) {
-        vfs_printk("dandling>");
+        vfs_printk("dangling>");
         return -ENOTSUP;
     }
 
@@ -314,7 +314,7 @@ VFS_FS_MOVE(ramfs_move)
 	vfs_printk("<%s %s ", __FUNCTION__, name);
 
     if (!target_dir->parent) {
-        vfs_printk("dandling>");
+        vfs_printk("dangling>");
         return -ENOTSUP;
     }
 

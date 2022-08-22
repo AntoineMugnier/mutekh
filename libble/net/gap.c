@@ -178,7 +178,7 @@ static void ble_gap_context_changed(struct net_layer_s *layer)
     gap_update_conn_in(gap, 5);
 }
 
-static void ble_gap_dandling(struct net_layer_s *layer)
+static void ble_gap_dangling(struct net_layer_s *layer)
 {
   struct ble_gap_s *gap = ble_gap_s_from_layer(layer);
 
@@ -193,7 +193,7 @@ static const struct net_layer_handler_s gap_handler = {
   .destroyed = ble_gap_destroyed,
   .task_handle = ble_gap_task_handle,
   .context_changed = ble_gap_context_changed,
-  .dandling = ble_gap_dandling,
+  .dangling = ble_gap_dangling,
 };
 
 error_t ble_gap_create(

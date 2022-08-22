@@ -138,8 +138,10 @@ error_t ble_stack_context_address_non_resolvable_generate(struct ble_stack_conte
   error_t err;
 
   err = dev_rng_wait_read(&ctx->rng, addr->addr, 6);
-  if (err)
+  if (err) {
+    logk_error("RNG failure: %d", err);
     return err;
+  }
 
   ble_addr_random_type_set(addr, BLE_ADDR_RANDOM_NON_RESOLVABLE);
 
@@ -153,8 +155,10 @@ error_t ble_stack_context_address_resolvable_generate(struct ble_stack_context_s
   error_t err;
 
   err = dev_rng_wait_read(&ctx->rng, addr->addr + 3, 3);
-  if (err)
+  if (err) {
+    logk_error("RNG failure: %d", err);
     return err;
+  }
 
   ble_addr_random_type_set(addr, BLE_ADDR_RANDOM_RESOLVABLE);
 
@@ -179,10 +183,16 @@ error_t ble_stack_context_local_address_get(struct ble_stack_context_s *ctx,
 
 uint32_t ble_stack_access_address_generate(struct ble_stack_context_s *ctx)
 {
+  error_t err;
+
   for (;;) {
     uint8_t tmp[16];
 
-    dev_rng_wait_read(&ctx->rng, tmp, 16);
+    err = dev_rng_wait_read(&ctx->rng, tmp, 16);
+    if (err) {
+      logk_error("RNG failure: %d", err);
+      return -1;
+    }
 
     for (uint8_t offset = 0; offset <= 12; ++offset) {
       uint32_t aa = endian_le32_na_load(tmp + offset);

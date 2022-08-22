@@ -1,0 +1,134 @@
+/*
+    This file is part of MutekH.
+
+    MutekH is free software; you can redistribute it and/or modify it
+    under the terms of the GNU Lesser General Public License as
+    published by the Free Software Foundation; version 2.1 of the
+    License.
+
+    MutekH is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this program.  If not, see
+    <http://www.gnu.org/licenses/>.
+
+    Copyright (c) Nicolas Pouillon <nipo@ssji.net> 2021
+*/
+
+.custom i2c
+.name kxtj3_i2c
+
+#include <device/class/i2c.h>
+#include "kxtj3.h"
+
+.global %10 x, %11 y, %12 z, %13 int1
+
+#define REG_SET(tmp, reg, value) \
+    cst16       tmp,   ((reg) << 8) | (value), 0 ;\
+    pack16be    tmp,   1,  2 ;\
+    i2c_wrr     tmp,   2,  STOP
+
+#define REG_SET_REG(tmp, reg, value) \
+    cst16       tmp,   (reg) << 8, 0 ; \
+    add         tmp,   value ; \
+    pack16be    tmp,   1,  2 ;\
+    i2c_wrr     tmp,   2,  STOP
+
+#define REG_SET_REG16BE(tmp, reg, value) \
+    cst8        tmp,   reg ; \
+    pack8       tmp,   1 ;\
+    i2c_wrr     tmp,   1, CONTINUOUS ;\
+    pack16be    value, 1,  2 ;\
+    i2c_wrr     value, 2,  STOP
+
+#define REG_GET(dst, reg) \
+    cst8        dst,   (reg) ;\
+    pack8       dst,   1 ;\
+    i2c_wrr     dst,   1, RESTART ;\
+    i2c_rdr     dst,   1, STOP ;\
+    unpack8     dst,   1
+
+.func kxtj3_bc_initialize
+    .export kxtj3_bc_initialize
+    .input %0 reset_time
+    .clobber %4, %5
+
+    /* Ensure this is the right device */
+    /* - Check ID register */
+    REG_GET(%4, KXTJ3_WHO_AM_I)
+    cst8 %5, KXTJ3_WHO_AM_I_VALUE
+    neq %4, %5
+     abort
+
+    /* - Power down */
+    REG_SET(%4, KXTJ3_CTRL1, 0)
+    i2c_yield_delay %reset_time
+    REG_SET(%4, KXTJ3_CTRL2, 0)
+
+    /* - Check non-default DCST */
+    REG_SET(%4, KXTJ3_CTRL2, KXTJ3_CTRL2_DCST)
+    i2c_yield_delay %reset_time
+    REG_GET(%4, KXTJ3_DCST_RESP)
+    cst8 %5, KXTJ3_DCST_RESP_TEST
+    neq %4, %5
+     abort
+
+    /* - Reset, Check normal DCST */
+    REG_SET(%4, KXTJ3_CTRL2, KXTJ3_CTRL2_SRST)
+    i2c_yield_delay %reset_time
+    REG_GET(%4, KXTJ3_DCST_RESP)
+    cst8 %5, KXTJ3_DCST_RESP_DEFAULT
+    neq %4, %5
+     abort
+
+    /* Now we are off */
+    end
+.endfunc
+
+.func kxtj3_bc_shutdown
+    .export kxtj3_bc_shutdown
+    .clobber %4
+
+    REG_SET(%4, KXTJ3_CTRL1, 0)
+    REG_SET(%4, KXTJ3_CTRL2, 0)
+    end
+.endfunc
+
+.func kxtj3_bc_configure
+    .export kxtj3_bc_configure
+    .input %0 ctrl1, %1 ctrl2, %2 data_ctrl, %3 wakeup_count, %4 na_counter, %5 thresh
+    .clobber %6 tmp, %5, %0
+
+    REG_SET(%tmp, KXTJ3_CTRL1, 0)
+    REG_SET_REG(%tmp, KXTJ3_CTRL1, %ctrl1)
+    REG_SET_REG(%tmp, KXTJ3_CTRL2, %ctrl2)
+    REG_SET(%tmp, KXTJ3_INT_CTRL1, 0x30)
+    REG_SET(%tmp, KXTJ3_INT_CTRL2, 0x3f)
+    REG_SET_REG(%tmp, KXTJ3_DATA_CTRL, %data_ctrl)
+    REG_SET_REG(%tmp, KXTJ3_WAKEUP_COUNTER, %wakeup_count)
+    REG_SET_REG(%tmp, KXTJ3_NA_COUNTER, %na_counter)
+    REG_SET_REG16BE(%tmp, KXTJ3_WAKEUP_THRESHOLD_H, %thresh)
+    bit32s %ctrl1, 7
+    REG_SET_REG(%tmp, KXTJ3_CTRL1, %ctrl1)
+    REG_GET(%tmp, KXTJ3_INT_REL)
+    end
+.endfunc
+
+.func kxtj3_bc_read
+    .export kxtj3_bc_read
+    .clobber %4 tmp
+
+    REG_GET(%int1, KXTJ3_INT_SOURCE1)
+
+    cst8        %tmp,   KXTJ3_XOUT_L
+    pack8       %tmp,   1
+    i2c_wrr     %tmp,   1, RESTART
+    i2c_rdr     %x, 6, STOP
+    unpack16le  %x, 3, 6
+
+    REG_GET(%tmp, KXTJ3_INT_REL)
+    end
+.endfunc

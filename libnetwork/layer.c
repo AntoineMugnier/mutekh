@@ -18,14 +18,15 @@
     Copyright Nicolas Pouillon <nipo@ssji.net> (c) 2015
 */
 
+#undef LOGK_MODULE_ID
+#define LOGK_MODULE_ID "nlay"
+
 #include <mutek/printk.h>
 
 #include <net/scheduler.h>
 #include <net/layer.h>
 
 #include "network.h"
-
-#define dprintk(...) do{}while(0)
 
 void net_layer_context_changed(struct net_layer_s *layer)
 {
@@ -62,7 +63,7 @@ error_t net_layer_bind(
   if (err)
     return err;
 
-  dprintk("Layer %p %p bound to %p %p\n", child, child->handler,
+  logk_trace("Layer %p %p bound to %p %p", child, child->handler,
         layer, layer->handler);
 
   child->parent = layer;
@@ -83,7 +84,7 @@ void net_layer_unbind(
     struct net_layer_s *layer,
     struct net_layer_s *child)
 {
-  dprintk("Layer %p %p unbound from %p %p\n", child, child->handler,
+  logk_trace("Layer %p %p unbound from %p %p", child, child->handler,
         layer, layer->handler);
 
   assert(child->parent == layer);
@@ -91,8 +92,8 @@ void net_layer_unbind(
   net_layer_list_remove(&layer->children, child);
   child->parent = NULL;
 
-  if (child->handler->dandling)
-    child->handler->dandling(child);
+  if (child->handler->dangling)
+    child->handler->dangling(child);
 
   if (layer->handler->unbound)
     layer->handler->unbound(layer, child);
@@ -128,7 +129,7 @@ error_t net_layer_init(
 
   net_scheduler_layer_created(sched, layer);
   
-  dprintk("Layer %p %p init\n", layer, layer->handler);
+  logk_trace("Layer %p %p init", layer, layer->handler);
 
   net_scheduler_timer_use(layer->scheduler);
 
@@ -152,18 +153,20 @@ void net_layer_destroy_real(
 
   layer->scheduler = NULL;
 
-  dprintk("Layer %p %p destroy\n", layer, layer->handler);
+  logk_trace("Layer %p %p destroy delegate %p", layer, layer->handler, delegate);
 
   while ((child = net_layer_list_head(&layer->children))) {
-    dprintk(" cleaning ref to %p %p\n", layer, layer->handler);
+    logk_trace(" cleaning ref to %p %p", layer, layer->handler);
     net_layer_unbind(layer, child);
     net_layer_refdec(child);
   }
 
   net_scheduler_from_layer_cancel(sched, layer);
 
-  if (delegate)
+  if (delegate) {
+    logk_trace("Layer %p calling delegate %p release", layer, delegate);
     delegate_vtable->release(delegate, layer);
+  }
 
   layer->delegate = NULL;
 

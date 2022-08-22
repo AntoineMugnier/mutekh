@@ -58,10 +58,12 @@ struct printk_backend_s
 GCT_CONTAINER_TYPES      (printk_backend, struct printk_backend_s *, list_entry);
 
 #ifdef CONFIG_MUTEK_PRINTK_FATAL_ABORT
-__attribute__((noreturn))
-void printk_fatal_abort(void);
+# define printk_fatal_abort() do {                      \
+    logk_error("printk_fatal_abort reached, aborting"); \
+    abort();                                            \
+  } while (0)
 #else
-#define printk_fatal_abort() do {} while(0)
+# define printk_fatal_abort() do {} while (0)
 #endif
 
 /** @This registers a printk backend */

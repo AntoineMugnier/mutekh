@@ -287,7 +287,7 @@ static void ble_gatt_context_changed(struct net_layer_s *layer)
   ble_gattdb_client_subscription_set(&gatt->client, gatt->peer->subscriptions, BLE_SUBSCRIBED_CHAR_COUNT);
 }
 
-static void ble_gatt_dandling(struct net_layer_s *layer)
+static void ble_gatt_dangling(struct net_layer_s *layer)
 {
   struct ble_gatt_s *gatt = ble_gatt_s_from_layer(layer);
 
@@ -363,7 +363,7 @@ static const struct net_layer_handler_s gatt_handler = {
   .destroyed = ble_gatt_destroyed,
   .task_handle = ble_gatt_task_handle,
   .context_changed = ble_gatt_context_changed,
-  .dandling = ble_gatt_dandling,
+  .dangling = ble_gatt_dangling,
 };
 
 static const struct ble_gattdb_client_handler_s gatt_db_handler = {
