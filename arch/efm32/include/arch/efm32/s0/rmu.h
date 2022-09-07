@@ -10,7 +10,7 @@
 #ifndef _EFM32_RMU_BFGEN_DEFS_
 #define _EFM32_RMU_BFGEN_DEFS_
 
-# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT)
+# if (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32LG) || (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32WG) || (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32GG)
 #define EFM32_RMU_CTRL_ADDR                          0x00000000
 #define EFM32_RMU_CTRL_MASK                          0x00000003
 /** Set this bit to disable the LOCKUP signal (from the Cortex) from resetting
@@ -25,7 +25,7 @@
   #define EFM32_RMU_CTRL_BURSTEN_SET(x, v)         do { (x) = (((x) & ~0x2) | ((v) << 1)); } while(0)
 # endif
 
-# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GECKO) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_TINY)
+# if (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32G) || (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32ZG) || (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32TG)
 #define EFM32_RMU_CTRL_ADDR                          0x00000000
 #define EFM32_RMU_CTRL_MASK                          0x00000001
 /** Set this bit to disable the LOCKUP signal (from the Cortex) from resetting
@@ -35,7 +35,7 @@
   #define EFM32_RMU_CTRL_LOCKUPRDIS_SET(x, v)      do { (x) = (((x) & ~0x1) | ((v) << 0)); } while(0)
 # endif
 
-# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT)
+# if (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32LG) || (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32WG) || (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32GG)
 #define EFM32_RMU_RSTCAUSE_ADDR                      0x00000004
 #define EFM32_RMU_RSTCAUSE_MASK                      0x0000ffff
 /** Set if a power on reset has been performed. Must be cleared by software.
@@ -109,7 +109,7 @@
   #define EFM32_RMU_RSTCAUSE_BUMODERST_SET(x, v)   do { (x) = (((x) & ~0x8000) | ((v) << 15)); } while(0)
 # endif
 
-# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO) || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_TINY)
+# if (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32ZG) || (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32TG)
 #define EFM32_RMU_RSTCAUSE_ADDR                      0x00000004
 #define EFM32_RMU_RSTCAUSE_MASK                      0x000007ff
 /** Set if a power on reset has been performed. Must be cleared by software.
@@ -168,7 +168,7 @@
   #define EFM32_RMU_RSTCAUSE_BODAVDD1_SET(x, v)    do { (x) = (((x) & ~0x400) | ((v) << 10)); } while(0)
 # endif
 
-# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GECKO)
+# if (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32G)
 #define EFM32_RMU_RSTCAUSE_ADDR                      0x00000004
 #define EFM32_RMU_RSTCAUSE_MASK                      0x0000007f
 /** Set if a power on reset has been performed. Must be cleared by software.

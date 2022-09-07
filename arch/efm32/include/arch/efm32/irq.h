@@ -1,22 +1,29 @@
 
 #include "chips.h"
 
-# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) \
-  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) \
-  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT)
-# include "efm/leopard/irq.h"
-#elif (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GECKO)
-# include "efm/gecko/irq.h"
-#elif (CONFIG_EFM32_FAMILY == EFM32_FAMILY_TINY)
-# include "efm/tiny/irq.h"
-#elif (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO)
-# include "efm/zero/irq.h"
-#elif (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1)
-# include "efr/xg1/irq.h"
-#elif (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12)
-# include "efr/xg12/irq.h"
-#elif (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG14)
-# include "efr/xg14/irq.h"
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 0
+# if EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32LG || \
+     EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32GG || \
+     EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32GG
+#  include "s0/leopard/irq.h"
+# elif EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32G
+#  include "s0/gecko/irq.h"
+# elif EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32TG
+#  include "s0/tiny/irq.h"
+# elif EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32ZG
+#  include "s0/zero/irq.h"
+# else
+#  error not supported
+# endif
+
+#elif EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
+# if EFM32_CONFIG(CONFIG_EFM32_CFAMILY) == 0
+#  include "s1/xg1/irq.h"
+# elif EFM32_CONFIG(CONFIG_EFM32_CFAMILY) == 2
+#  include "s1/xg12/irq.h"
+# elif EFM32_CONFIG(CONFIG_EFM32_CFAMILY) == 4
+#  include "s1/xg14/irq.h"
+# endif
 #else
 # error not supported
 #endif

@@ -1,10 +1,10 @@
 
 #include "chips.h"
 
-#if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
-# include "efm/adc.h"
-#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1
-# include "efr/dma.h"
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 0
+# include "s0/adc.h"
+#elif EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
+# include "s1/dma.h"
 #else
 # error not supported
 #endif

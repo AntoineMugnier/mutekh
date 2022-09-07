@@ -1,14 +1,10 @@
 
 #include "chips.h"
 
-#if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
-# include "efm/timer.h"
-#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1
-# include "efr/timer.h"
-#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12 
-# include "efr/timer.h"
-#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG14 
-# include "efr/timer.h"
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 0
+# include "s0/timer.h"
+#elif EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
+# include "s1/timer.h"
 #else
 # error
 #endif

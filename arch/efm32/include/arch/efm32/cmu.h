@@ -1,14 +1,18 @@
 
 #include "chips.h"
 
-#if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
-# include "efm/cmu.h"
-#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1
-# include "efr/xg1/cmu.h"
-#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12
-# include "efr/xg12/cmu.h"
-#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG14
-# include "efr/xg14/cmu.h"
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 0
+# include "s0/cmu.h"
+#elif EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
+# if EFM32_CONFIG(CONFIG_EFM32_CFAMILY) == 0
+#  include "s1/xg1/cmu.h"
+# elif EFM32_CONFIG(CONFIG_EFM32_CFAMILY) == 2
+#  include "s1/xg12/cmu.h"
+# elif EFM32_CONFIG(CONFIG_EFM32_CFAMILY) == 4
+#  include "s1/xg14/cmu.h"
+# else
+#  error not supported
+# endif
 #else
 # error not supported
 #endif

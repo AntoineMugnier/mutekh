@@ -67,7 +67,7 @@ static DEV_MEM_INFO(efm32_msc_info)
       info->flags |= DEV_MEM_ERASE_ONE |
         DEV_MEM_MAPPED_READ | DEV_MEM_PARTIAL_WRITE | DEV_MEM_PARTIAL_READ |
         DEV_MEM_CROSS_READ | DEV_MEM_PAGE_READ | DEV_MEM_PAGE_WRITE;
-#if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM)
+#if (EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 0)
       info->erase_cycles_p = 12; /* 20480 cycles */
 #else
       info->erase_cycles_p = 11; /* 10240 cycles */
@@ -81,7 +81,7 @@ static DEV_MEM_INFO(efm32_msc_info)
         }
       else
         {
-#if CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT
+#if EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32GG
           info->page_log2 = 11;
 #else
           info->page_log2 = EFM32_FLASH_PAGE_SIZE;
@@ -115,7 +115,7 @@ static DEV_MEM_REQUEST(efm32_msc_request)
 
   static const struct dev_mem_flash_op_info_s user_flash_info = {
     .base = 0x0fe00000,
-#if CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT
+#if EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32GG
     .end = 0x0fe00000 + (1 << 11),
 #else
     .end = 0x0fe00000 + (1 << EFM32_FLASH_PAGE_SIZE),

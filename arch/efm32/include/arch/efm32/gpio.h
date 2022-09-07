@@ -1,14 +1,10 @@
 
 #include "chips.h"
 
-#if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
-# include "efm/gpio.h"
-#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1
-# include "efr/gpio.h"
-#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12
-# include "efr/gpio.h"
-#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG14
-# include "efr/gpio.h"
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 0
+# include "s0/gpio.h"
+#elif EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
+# include "s1/gpio.h"
 #else
 # error not supported
 #endif

@@ -675,13 +675,12 @@ static error_t efm32_usart_timeout_init(struct efm32_usart_context_s *pv,
   EFM32_GPIO_EXTIPSELH_EXT_SETVAL(pin % 8, x, pin /16);
   cpu_mem_write_32(EFM32_GPIO_ADDR + offset, endian_le32(x));
 
-#if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1) ||\
-    (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12)
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
   x = low ? EFR32_PRS_CH_CTRL_SOURCESEL(GPIOL) : EFR32_PRS_CH_CTRL_SOURCESEL(GPIOH);
   x |= EFR32_PRS_CH_CTRL_EDSEL(OFF);
   EFR32_PRS_CH_CTRL_SIGSEL_SETVAL(x, pin % 8);
   cpu_mem_write_32(EFM32_PRS_ADDR + EFR32_PRS_CH_CTRL_ADDR(PRS_CHANNEL), endian_le32(x));
-#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
+#elif EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 0
   x = low ? EFM32_PRS_CTRL_SOURCESEL(GPIOL) : EFM32_PRS_CTRL_SOURCESEL(GPIOH);
   x |= EFM32_PRS_CTRL_EDSEL(OFF);
   EFM32_PRS_CTRL_SIGSEL_SET(x, pin % 8);
@@ -708,10 +707,9 @@ static error_t efm32_usart_timeout_init(struct efm32_usart_context_s *pv,
   /* Set input PRS channel as timer control */
   x = EFM32_TIMER_CC_CTRL_MODE(OFF) |
       EFM32_TIMER_CC_CTRL_FILT |
-#if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1) ||\
-    (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12)
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
       EFM32_TIMER_CC_CTRL_INSEL;
-#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
+#elif EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 0
       EFM32_TIMER_CC_CTRL_INSEL(PRS);
 #endif
   EFM32_TIMER_CC_CTRL_PRSSEL_SETVAL(x, PRS_CHANNEL);
@@ -778,8 +776,7 @@ static DEV_INIT(efm32_usart_char_init)
     goto err_mem;
   }
 
-#if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1) ||\
-    (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12)
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
   uint32_t enable = 0;
   uint32_t route = 0;
 
@@ -799,7 +796,7 @@ static DEV_INIT(efm32_usart_char_init)
     goto err_mem;
   }
 
-#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
+#elif EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 0
   uint32_t route = 0;
   if (loc[0] != IOMUX_INVALID_DEMUX)
     route |= EFM32_USART_ROUTE_RXPEN;
@@ -842,11 +839,10 @@ static DEV_INIT(efm32_usart_char_init)
   cpu_mem_write_32(pv->addr + EFM32_USART_CMD_ADDR,
                    endian_le32(EFM32_USART_CMD_CLEARRX | EFM32_USART_CMD_CLEARTX));
 
-#if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1) ||\
-    (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12)
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
   cpu_mem_write_32(pv->addr + EFM32_USART_ROUTELOC0_ADDR, endian_le32(route));
   cpu_mem_write_32(pv->addr + EFM32_USART_ROUTEPEN_ADDR, endian_le32(enable));
-#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
+#elif EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 0
   cpu_mem_write_32(pv->addr + EFM32_USART_ROUTE_ADDR, endian_le32(route));
 #else
 # error

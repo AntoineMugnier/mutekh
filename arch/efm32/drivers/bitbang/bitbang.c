@@ -626,15 +626,14 @@ static DEV_INIT(efm32_bitbang_init)
 
   uint32_t x;
  
-#if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1) || \
-    (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12)
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
  /* Enable Channel output on pin */
   x = EFM32_TIMER_ROUTEPEN_CCPEN(0);
   cpu_mem_write_32(pv->addr + EFM32_TIMER_ROUTEPEN_ADDR, endian_le32(x));
  
   x = EFM32_TIMER_ROUTELOC0_CCLOC(0, loc);
   cpu_mem_write_32(pv->addr + EFM32_TIMER_ROUTELOC0_ADDR, endian_le32(x));
-#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
+#elif EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 0
  /* Enable Channel output on pin */
   x = EFM32_TIMER_ROUTE_CCPEN(0);
   EFM32_TIMER_ROUTE_LOCATION_SETVAL(x, loc);

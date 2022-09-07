@@ -1,11 +1,13 @@
 
 %include efm32_stk.build
 
-%section efm32-gNNN-fX-* efm32-zgNNN-fX-* efm32-tgNNN-fX-* efm32-hgNNN-fX-* efm32-wgNNN-fX-* efm32-lgNNN-fX-* efm32-ggNNN-fX-*
+%section efm32-gNNN-fX-* efm32-LgNNN-fX-* ezr32-LgNNN-fX-*
+  # Series 0
+
   %types architecture
 
   CONFIG_ARCH_EFM32
-  CONFIG_EFM32_ARCHREV EFM32_ARCHREV_EFM
+  %set BUILD_NAME efm32
 
   # Memory layout
 
@@ -54,7 +56,7 @@
     %types family
 
     CONFIG_CPU_ARM32M_CORTEXM0
-    CONFIG_EFM32_FAMILY EFM32_FAMILY_ZERO
+    CONFIG_EFM32_CFAMILY EFM32_CFAMILY_EFM32ZG
 
     CONFIG_HEXO_CPU_STACK_SIZE 0x200
     CONFIG_PTHREAD_STACK_SIZE  0x200
@@ -62,34 +64,32 @@
     CONFIG_CPU_ARM32M_M_IRQ_COUNT 17
     CONFIG_EFM32_TRACE_AUXHFCO_FREQ 21000000
 
-    %set BUILD_NAME efm32-zero
-
-    %subsection efm32-zgNNN-f4-*
+    %subsection *-zgNNN-f4-*
       %types flash
       CONFIG_EFM32_FLASHSIZE 0x00001000
     %end
 
-    %subsection efm32-zgNNN-f8-*
+    %subsection *-zgNNN-f8-*
       %types flash
       CONFIG_EFM32_FLASHSIZE 0x00002000
     %end
 
-    %subsection efm32-zgNNN-f16-*
+    %subsection *-zgNNN-f16-*
       %types flash
       CONFIG_EFM32_FLASHSIZE 0x00004000
     %end
 
-    %subsection efm32-zgNNN-f32-*
+    %subsection *-zgNNN-f32-*
       %types flash
       CONFIG_EFM32_FLASHSIZE 0x00008000
     %end
 
-    %subsection efm32-zgNNN-f4-* efm32-zgNNN-f8-*
+    %subsection *-zgNNN-f4-* *-zgNNN-f8-*
       %types sram
       CONFIG_EFM32_RAMSIZE 0x800
     %end
 
-    %subsection efm32-zgNNN-f16-* efm32-zgNNN-f32-*
+    %subsection *-zgNNN-f16-* *-zgNNN-f32-*
       %types sram
       CONFIG_EFM32_RAMSIZE 0x1000
     %end
@@ -100,41 +100,39 @@
     %types family
 
     CONFIG_CPU_ARM32M_CORTEXM3
-    CONFIG_EFM32_FAMILY EFM32_FAMILY_TINY
+    CONFIG_EFM32_CFAMILY EFM32_CFAMILY_EFM32TG
 
     CONFIG_HEXO_CPU_STACK_SIZE 0x200
     CONFIG_PTHREAD_STACK_SIZE  0x200
 
     CONFIG_CPU_ARM32M_M_IRQ_COUNT 23
 
-    %set BUILD_NAME efm32-tiny
-
-    %subsection efm32-tgNNN-f4-*
+    %subsection *-tgNNN-f4-*
       %types flash
       CONFIG_EFM32_FLASHSIZE 0x00001000
     %end
 
-    %subsection efm32-tgNNN-f8-*
+    %subsection *-tgNNN-f8-*
       %types flash
       CONFIG_EFM32_FLASHSIZE 0x00002000
     %end
 
-    %subsection efm32-tgNNN-f16-*
+    %subsection *-tgNNN-f16-*
       %types flash
       CONFIG_EFM32_FLASHSIZE 0x00004000
     %end
 
-    %subsection efm32-tgNNN-f32-*
+    %subsection *-tgNNN-f32-*
       %types flash
       CONFIG_EFM32_FLASHSIZE 0x00008000
     %end
 
-    %subsection efm32-tgNNN-f4-* efm32-tgNNN-f8-*
+    %subsection *-tgNNN-f4-* *-tgNNN-f8-*
       %types sram
       CONFIG_EFM32_RAMSIZE 0x800
     %end
 
-    %subsection efm32-tgNNN-f16-* efm32-tgNNN-f32-*
+    %subsection *-tgNNN-f16-* *-tgNNN-f32-*
       %types sram
       CONFIG_EFM32_RAMSIZE 0x1000
     %end
@@ -145,56 +143,46 @@
     %types family
 
     CONFIG_CPU_ARM32M_CORTEXM3
-    CONFIG_EFM32_ARCHREV EFM32_ARCHREV_EFM
-    CONFIG_EFM32_FAMILY EFM32_FAMILY_GECKO
+    CONFIG_EFM32_CFAMILY EFM32_CFAMILY_EFM32G
 
     CONFIG_HEXO_CPU_STACK_SIZE 0x800
     CONFIG_PTHREAD_STACK_SIZE  0x800
 
     CONFIG_CPU_ARM32M_M_IRQ_COUNT 30
 
-    %set BUILD_NAME efm32-gecko
-
-    %subsection efm32-gNNN-f16-*
+    %subsection *-gNNN-f16-*
       %types flash
       CONFIG_EFM32_FLASHSIZE 0x00004000
     %end
 
-    %subsection efm32-gNNN-f32-*
+    %subsection *-gNNN-f32-*
       %types flash
       CONFIG_EFM32_FLASHSIZE 0x00008000
     %end
 
-    %subsection efm32-gNNN-f64-*
+    %subsection *-gNNN-f64-*
       %types flash
       CONFIG_EFM32_FLASHSIZE 0x00010000
     %end
 
-    %subsection efm32-gNNN-f128-*
+    %subsection *-gNNN-f128-*
       %types flash
       CONFIG_EFM32_FLASHSIZE 0x00020000
     %end
 
-    %subsection efm32-gNNN-f16-* efm32-gNNN-f32-*
+    %subsection *-gNNN-f16-* *-gNNN-f32-*
       %types sram
       CONFIG_EFM32_RAMSIZE 0x2000
     %end
 
-    %subsection efm32-gNNN-f64-* efm32-gNNN-f128-*
+    %subsection *-gNNN-f64-* *-gNNN-f128-*
       %types sram
       CONFIG_EFM32_RAMSIZE 0x4000
     %end
 
   %end
 
-
-  %subsection efm32-wgNNN-fX-* efm32-lgNNN-fX-* efm32-ggNNN-fX-*
-    CONFIG_DRIVER_USB_SYNOPSYS_EFM32
-    CONFIG_CPU_ARM32M_M_IRQ_COUNT 39
-  %end
-
-
-  %subsection efm32-wgNNN-fX-* efm32-lgNNN-fX-*
+  %subsection efm32-wgNNN-*-* efm32-lgNNN-*-* ezr32-wgNNN-*-* ezr32-lgNNN-*-* ezr32-hgNNN-*-*
     %types sram
 
     CONFIG_HEXO_CPU_STACK_SIZE 0x400
@@ -202,50 +190,50 @@
 
     CONFIG_EFM32_RAMSIZE 0x8000
 
-    %subsection efm32-*-f64-*
+    %subsection *-*-f64-*
       %types flash
       CONFIG_EFM32_FLASHSIZE 0x00010000
     %end
 
-    %subsection efm32-*-f128-*
+    %subsection *-*-f128-*
       %types flash
       CONFIG_EFM32_FLASHSIZE 0x00020000
     %end
 
-    %subsection efm32-*-f256-*
+    %subsection *-*-f256-*
       %types flash
       CONFIG_EFM32_FLASHSIZE 0x00040000
     %end
 
   %end
 
-  %subsection efm32-lgNNN-fX-*
+  %subsection efm32-lgNNN-*-* ezr32-lgNNN-*-*
     %types family
 
-    %set BUILD_NAME efm32-leopard
-
     CONFIG_CPU_ARM32M_CORTEXM3
-    CONFIG_EFM32_FAMILY EFM32_FAMILY_LEOPARD
+    CONFIG_DRIVER_USB_SYNOPSYS_EFM32
+    CONFIG_CPU_ARM32M_M_IRQ_COUNT 39
+    CONFIG_EFM32_CFAMILY EFM32_CFAMILY_EFM32LG
     CONFIG_EFM32_TRACE_AUXHFCO_FREQ 28000000
   %end
 
-  %subsection efm32-wgNNN-fX-*
+  %subsection efm32-wgNNN-*-* ezr32-wgNNN-*-*
     %types family
-
-    %set BUILD_NAME efm32-wonder
 
     CONFIG_CPU_ARM32M_CORTEXM4
-    CONFIG_EFM32_FAMILY EFM32_FAMILY_WONDER
+    CONFIG_DRIVER_USB_SYNOPSYS_EFM32
+    CONFIG_CPU_ARM32M_M_IRQ_COUNT 39
+    CONFIG_EFM32_CFAMILY EFM32_CFAMILY_EFM32WG
     CONFIG_EFM32_TRACE_AUXHFCO_FREQ 28000000
   %end
 
-  %subsection efm32-ggNNN-fX-*
+  %subsection efm32-ggNNN-*-*
     %types family
 
-    %set BUILD_NAME efm32-giant
-
     CONFIG_CPU_ARM32M_CORTEXM3
-    CONFIG_EFM32_FAMILY EFM32_FAMILY_GIANT
+    CONFIG_DRIVER_USB_SYNOPSYS_EFM32
+    CONFIG_CPU_ARM32M_M_IRQ_COUNT 39
+    CONFIG_EFM32_CFAMILY EFM32_CFAMILY_EFM32GG
     CONFIG_EFM32_TRACE_AUXHFCO_FREQ 28000000
 
     %types sram
@@ -255,12 +243,12 @@
 
     CONFIG_EFM32_RAMSIZE 0x20000
 
-    %subsection efm32-*-f512-*
+    %subsection *-*-f512-*
       %types flash
       CONFIG_EFM32_FLASHSIZE 0x00080000
     %end
 
-    %subsection efm32-*-f1024-*
+    %subsection *-*-f1024-*
       %types flash
       CONFIG_EFM32_FLASHSIZE 0x00100000
     %end
@@ -271,25 +259,13 @@
   %requiretypes sram
   %requiretypes flash
 
-%section efr32-LgXLNNN-fX-* efm32-jgXLNNN-fX-* efm32-pgXLNNN-fX-*
+%section efr32-Lg1LNNN-fX-* efm32-Lg1LNNN-fX-* efr32-Lg1XLNNN-fX-* efm32-Lg1XLNNN-fX-*
+  # Series 1
+
   %types architecture
 
   CONFIG_ARCH_EFM32
-
-  %subsection efr32-Lg1LNNN-fX-* efm32-jg1LNNN-fX-* efm32-pg1LNNN-fX-*
-    CONFIG_EFM32_ARCHREV EFM32_ARCHREV_EFR_XG1
-  %end
-
-  %subsection efr32-Lg12LNNN-fX-* efm32-jg12LNNN-fX-*
-    CONFIG_EFM32_ARCHREV EFM32_ARCHREV_EFR_XG12
-  %end
-
-  %subsection efr32-Lg14LNNN-fX-*
-    CONFIG_EFM32_ARCHREV EFM32_ARCHREV_EFR_XG14
-  %end
-
-  %types family
-  %set BUILD_NAME efr32
+  %set BUILD_NAME efm32
 
   # Memory layout
 
@@ -328,54 +304,174 @@
   CONFIG_HEXO_CPU_STACK_SIZE 0x800
   CONFIG_PTHREAD_STACK_SIZE  0x800
 
-%subsection efr32-*-*-*
-  CONFIG_CPU_ARM32M_CORTEXM4
-  CONFIG_CPU_ARM32M_M_IRQ_COUNT 45
-%end
-%subsection efm32-*-*-*
-  CONFIG_CPU_ARM32M_CORTEXM3
-  CONFIG_CPU_ARM32M_M_IRQ_COUNT 49
-%end
-
-  %subsection efm32-jgXLNNN-fX-*
-    CONFIG_EFM32_FAMILY EFM32_FAMILY_JADE
+  %subsection efr32-*-*-*
+    CONFIG_CPU_ARM32M_CORTEXM4
+    CONFIG_CPU_ARM32M_M_IRQ_COUNT 45
   %end
 
-  %subsection efr32-mgXLNNN-*-* efr32-mgXLNNN?-*-*
-    CONFIG_EFM32_FAMILY EFM32_FAMILY_MIGHTY
+  %subsection efm32-*-*-*
+    CONFIG_CPU_ARM32M_CORTEXM3
+    CONFIG_CPU_ARM32M_M_IRQ_COUNT 49
   %end
 
-  %subsection efr32-fgXLNNN-*-* efr32-fgXLNNN?-*-*
-    CONFIG_EFM32_FAMILY EFM32_FAMILY_FLEX
+  %subsection efr32-mg1pNNN-*-*
+    %types family
+    CONFIG_EFM32_CFAMILY EFM32_CFAMILY_EFR32MG1P
   %end
 
-  %subsection efr32-bgXLNNN-*-* efr32-bgXLNNN?-*-*
-    CONFIG_EFM32_FAMILY EFM32_FAMILY_BLUE
+  %subsection efr32-fg1pNNN-*-*
+    %types family
+    CONFIG_EFM32_CFAMILY EFM32_CFAMILY_EFR32FG1P
+  %end
+
+  %subsection efr32-bg1pNNN-*-*
+    %types family
+    CONFIG_EFM32_CFAMILY EFM32_CFAMILY_EFR32BG1P
+  %end
+
+  %subsection efr32-mg1bNNN-*-*
+    %types family
+    CONFIG_EFM32_CFAMILY EFM32_CFAMILY_EFR32MG1B
+  %end
+
+  %subsection efr32-fg1bNNN-*-*
+    %types family
+    CONFIG_EFM32_CFAMILY EFM32_CFAMILY_EFR32FG1B
+  %end
+
+  %subsection efr32-bg1bNNN-*-*
+    %types family
+    CONFIG_EFM32_CFAMILY EFM32_CFAMILY_EFR32BG1B
+  %end
+
+  %subsection efr32-mg1vNNN-*-*
+    %types family
+    CONFIG_EFM32_CFAMILY EFM32_CFAMILY_EFR32MG1V
+  %end
+
+  %subsection efr32-fg1vNNN-*-*
+    %types family
+    CONFIG_EFM32_CFAMILY EFM32_CFAMILY_EFR32FG1V
+  %end
+
+  %subsection efr32-bg1vNNN-*-*
+    %types family
+    CONFIG_EFM32_CFAMILY EFM32_CFAMILY_EFR32BG1V
+  %end
+
+  %subsection efr32-mg12pNNN-*-*
+    %types family
+    CONFIG_EFM32_CFAMILY EFM32_CFAMILY_EFR32MG12P
+  %end
+
+  %subsection efr32-fg12pNNN-*-*
+    %types family
+    CONFIG_EFM32_CFAMILY EFM32_CFAMILY_EFR32FG12P
+  %end
+
+  %subsection efr32-bg12pNNN-*-*
+    %types family
+    CONFIG_EFM32_CFAMILY EFM32_CFAMILY_EFR32BG12P
+  %end
+
+  %subsection efr32-mg13pNNN-*-*
+    %types family
+    CONFIG_EFM32_CFAMILY EFM32_CFAMILY_EFR32MG13P
+  %end
+
+  %subsection efr32-fg13pNNN-*-*
+    %types family
+    CONFIG_EFM32_CFAMILY EFM32_CFAMILY_EFR32FG13P
+  %end
+
+  %subsection efr32-bg13pNNN-*-*
+    %types family
+    CONFIG_EFM32_CFAMILY EFM32_CFAMILY_EFR32BG13P
+  %end
+
+  %subsection efr32-mg14pNNN-*-*
+    %types family
+    CONFIG_EFM32_CFAMILY EFM32_CFAMILY_EFR32MG14P
+  %end
+
+  %subsection efr32-fg14pNNN-*-*
+    %types family
+    CONFIG_EFM32_CFAMILY EFM32_CFAMILY_EFR32FG14P
+  %end
+
+  %subsection efr32-bg14pNNN-*-*
+    %types family
+    CONFIG_EFM32_CFAMILY EFM32_CFAMILY_EFR32BG14P
+  %end
+
+  %subsection efm32-pg1bNNN-*-*
+    %types family
+    CONFIG_EFM32_CFAMILY EFM32_CFAMILY_EFM32PG1B
+  %end
+
+  %subsection efm32-jg1bNNN-*-*
+    %types family
+    CONFIG_EFM32_CFAMILY EFM32_CFAMILY_EFM32JG1B
+  %end
+
+  %subsection efm32-gg11bNNN-*-*
+    %types family
+    CONFIG_EFM32_CFAMILY EFM32_CFAMILY_EFM32GG11B
+  %end
+
+  %subsection efm32-tg11bNNN-*-*
+    %types family
+    CONFIG_EFM32_CFAMILY EFM32_CFAMILY_EFM32TG11B
+  %end
+
+  %subsection efm32-pg12bNNN-*-*
+    %types family
+    CONFIG_EFM32_CFAMILY EFM32_CFAMILY_EFM32PG12B
+  %end
+
+  %subsection efm32-jg12bNNN-*-*
+    %types family
+    CONFIG_EFM32_CFAMILY EFM32_CFAMILY_EFM32JG12B
+  %end
+
+  %subsection efm32-pg13bNNN-*-*
+    %types family
+    CONFIG_EFM32_CFAMILY EFM32_CFAMILY_EFM32PG13B
+  %end
+
+  %subsection efm32-jg13bNNN-*-*
+    %types family
+    CONFIG_EFM32_CFAMILY EFM32_CFAMILY_EFM32JG13B
   %end
 
   ########### Flash size
 
-  %subsection efr32-?gXLNNN-f32-*
+  %subsection *-*-f32-*
     %types flash
     CONFIG_EFM32_FLASHSIZE 0x00008000
   %end
 
-  %subsection efr32-?gXLNNN-f64-*
+  %subsection *-*-f64-*
     %types flash
     CONFIG_EFM32_FLASHSIZE 0x00010000
   %end
 
-  %subsection efr32-?gXLNNN-f128-*
+  %subsection *-*-f128-*
     %types flash
     CONFIG_EFM32_FLASHSIZE 0x00020000
   %end
 
-  %subsection efr32-?gXLNNN-f256-*
+  %subsection *-*-f256-*
     %types flash
     CONFIG_EFM32_FLASHSIZE 0x00040000
   %end
 
-  %subsection efr32-?gXLNNN-f1024-* efm32-?gXLNNN-f1024-*
+  %subsection *-*-f512-*
+    %types flash
+    CONFIG_EFM32_FLASHSIZE 0x00080000
+  %end
+
+  %subsection *-*-f1024-* *-*-f1024-*
     %types flash
     CONFIG_EFM32_FLASHSIZE 0x00100000
   %end

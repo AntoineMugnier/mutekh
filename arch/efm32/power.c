@@ -27,7 +27,7 @@
 
 #include <arch/efm32/devaddr.h>
 
-#if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 0
 # include <arch/efm32/rmu.h>
 # include <arch/efm32/emu.h>
 #endif
@@ -49,7 +49,7 @@ uint16_t efm32_reset_cause = 0;
 
 enum power_reset_cause_e power_reset_cause(void)
 {
-#if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 0
   if (efm32_reset_cause & EFM32_RMU_RSTCAUSE_PORST)
     return POWER_RESET_CAUSE_POWERUP;
   if (efm32_reset_cause & EFM32_RMU_RSTCAUSE_EXTRST)
@@ -68,7 +68,7 @@ enum power_reset_cause_e power_reset_cause(void)
 
 void efm32_copy_reset_cause()
 {
-#if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 0
   efm32_reset_cause = cpu_mem_read_32(EFM32_RMU_ADDR + EFM32_RMU_RSTCAUSE_ADDR);
 
   /* clear causes */

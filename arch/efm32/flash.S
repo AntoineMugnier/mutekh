@@ -212,7 +212,7 @@ FUNC_START(.text, flash_page_write)
 	adds	r1,	#4
 	adds	r0,	#4
 	subs	r2,	#1
-#if CONFIG_EFM32_FAMILY == EFM32_FAMILY_GECKO
+#if EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32G
 	bne	3b
 #else
 	bne	2b

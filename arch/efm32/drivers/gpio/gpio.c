@@ -64,17 +64,16 @@
 #define GPIO_SRC_IRQ_COUNT 2
 #define GPIO_BANK_SIZE 16
 
-#if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 0
 # define GPIO_PINIDX_COUNT 1
 # define GPIO_PINGRP_COUNT 16
 # define GPIO_BANK_COUNT 6
-#endif
-#if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1) ||\
-    (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12) ||\
-    (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG14)
+#elif EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
 # define GPIO_PINIDX_COUNT 4
 # define GPIO_PINGRP_COUNT 4
 # define GPIO_BANK_COUNT 12
+#else
+# error
 #endif
 
 /* This specifies which bank is selected for each interrupt line. */
@@ -88,9 +87,7 @@ efm32_gpio_icupv_bank(const struct dev_irq_sink_s *sink)
 static ALWAYS_INLINE uint_fast8_t
 efm32_gpio_icupv_idx(const struct dev_irq_sink_s *sink)
 {
-#if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1) ||\
-    (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12) ||\
-    (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG14)
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
   return sink->icu_pv >> 5;
 #else
   return 0;
@@ -101,9 +98,7 @@ static ALWAYS_INLINE uint8_t
 efm32_gpio_icupv(uint_fast8_t bank, uint_fast8_t idx)
 {
   return bank
-#if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1) ||\
-    (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12) ||\
-    (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG14)
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
     | idx << 5
 #endif
     ;
@@ -247,9 +242,7 @@ static error_t efm32_gpio_mode(gpio_id_t io_first, gpio_id_t io_last,
       mde = EFM32_GPIO_MODEL_MODE_DISABLED;
       break;
     case DEV_PIN_PUSHPULL:
-#if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1) ||\
-    (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12) ||\
-    (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG14)
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
       mde = EFM32_GPIO_MODEL_MODE_PUSHPULL;
 #else
       mde = EFM32_GPIO_MODEL_MODE_PUSHPULLDRIVE;
@@ -264,9 +257,7 @@ static error_t efm32_gpio_mode(gpio_id_t io_first, gpio_id_t io_last,
       mde = EFM32_GPIO_MODEL_MODE_INPUTPULL;
       break;
     case DEV_PIN_OPENDRAIN:
-#if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1) ||\
-    (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12) ||\
-    (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG14)
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
       mde = EFM32_GPIO_MODEL_MODE_WIREDAND;
 #else
       mde = EFM32_GPIO_MODEL_MODE_WIREDANDDRIVE;

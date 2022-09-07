@@ -76,12 +76,10 @@ DRIVER_PV(struct efm32_usart_spi_context_s
   uint32_t                       ctrl;
   uint32_t                       BITFIELD(clkdiv,24);
   uint32_t                       BITFIELD(frame,8);
-#if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1) ||\
-    (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12) ||\
-    (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG14)
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
   uint32_t                       route;
   uint32_t                       enable;
-#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
+#elif EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 0
   uint16_t                       route;
 #else
 # error
@@ -383,12 +381,10 @@ static DEV_SPI_CTRL_TRANSFER(efm32_usart_spi_transfer)
 # endif
 
       cpu_mem_write_32(pv->addr + EFM32_USART_CLKDIV_ADDR, endian_le32(pv->clkdiv));
-#if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1) ||\
-    (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12) ||\
-    (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG14)
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
       cpu_mem_write_32(pv->addr + EFM32_USART_ROUTELOC0_ADDR, endian_le32(pv->route));
       cpu_mem_write_32(pv->addr + EFM32_USART_ROUTEPEN_ADDR, endian_le32(pv->enable));
-#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
+#elif EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 0
       cpu_mem_write_32(pv->addr + EFM32_USART_ROUTE_ADDR, endian_le32(pv->route));
 #else
 # error
@@ -506,9 +502,7 @@ static DEV_INIT(efm32_usart_spi_init)
   if (device_iomux_setup(dev, ">clk <miso? >mosi? >cs?", loc, NULL, NULL))
     goto err_clk;
 
-#if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1) ||\
-    (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12) ||\
-    (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG14)
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
   if (loc[0] != IOMUX_INVALID_DEMUX)
     {
       pv->enable |= EFM32_USART_ROUTEPEN_CLKPEN;
@@ -533,7 +527,7 @@ static DEV_INIT(efm32_usart_spi_init)
   cpu_mem_write_32(pv->addr + EFM32_USART_ROUTELOC0_ADDR, endian_le32(pv->route));
   cpu_mem_write_32(pv->addr + EFM32_USART_ROUTEPEN_ADDR, endian_le32(pv->enable));
 
-#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
+#elif EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 0
   pv->route =  EFM32_USART_ROUTE_CLKPEN;
   if (loc[1] != IOMUX_INVALID_DEMUX)
     pv->route |= EFM32_USART_ROUTE_RXPEN;

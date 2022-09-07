@@ -36,11 +36,6 @@
 #include <device/irq.h>
 #include <device/class/cmu.h>
 
-#define SERIE1 (\
- (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1) ||\
- (CONFIG_EFM33_ARCHREV == EFM32_ARCHREV_EFR_XG12) ||\
- (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG14))
-
 typedef UINT_FIT_TYPE(1ULL << (EFM32_CLOCK_count - 1)) efm32_clock_mask_t;
 #define EFM32_CLK_MASK(x) (1ULL << (x))
 
@@ -60,7 +55,7 @@ typedef UINT_FIT_TYPE(1ULL << (EFM32_CLOCK_count - 1)) efm32_clock_mask_t;
   ((EFM32_CLK_MASK(EFM32_CLOCK_LFBCLK_last - EFM32_CLOCK_LFBCLK_first + 1) - 1) \
    << EFM32_CLOCK_LFBCLK_first)
 
-#if SERIE1
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
 #define EFM32_CLOCK_HFBUSCLK_CHILDMASK \
   ((EFM32_CLK_MASK(EFM32_CLOCK_HFBUSCLK_last - EFM32_CLOCK_HFBUSCLK_first + 1) - 1) \
    << EFM32_CLOCK_HFBUSCLK_first)
@@ -84,7 +79,7 @@ typedef UINT_FIT_TYPE(1ULL << (EFM32_CLOCK_count - 1)) efm32_clock_mask_t;
 
 static const efm32_clock_mask_t efm32_clock_em1_mask =
   ((EFM32_CLOCK_HFCORECLK_CHILDMASK |
-#if SERIE1
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
     EFM32_CLOCK_HFBUSCLK_CHILDMASK  |
     EFM32_CLOCK_HFRADIOCLK_CHILDMASK |
     EFM32_CLOCK_HFRADIOALTCLK_CHILDMASK |
@@ -108,7 +103,7 @@ static const efm32_clock_mask_t efm32_clock_alwayson_mask =
 # ifdef CONFIG_DRIVER_EFM32_LEUART_PRINTK
   /* hack to keep leuart clock enabled for early console before the
      leuart driver is loaded. */
-#    if SERIE1
+#    if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
 #  if defined(EFM32_CLOCK_LEUART0) && CONFIG_MUTEK_PRINTK_ADDR == 0x4004A000
   | EFM32_CLK_MASK(EFM32_CLOCK_LEUART0);
 #  endif
@@ -124,7 +119,7 @@ static const efm32_clock_mask_t efm32_clock_alwayson_mask =
 # ifdef CONFIG_DRIVER_EFM32_USART_PRINTK
   /* hack to keep usart clock enabled for early console before the
      usart driver is loaded. */
-#    if SERIE1
+#    if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
 #  if defined(EFM32_CLOCK_USART0) && CONFIG_MUTEK_PRINTK_ADDR == 0x40010000
   | EFM32_CLK_MASK(EFM32_CLOCK_USART0);
 #  elif defined(EFM32_CLOCK_USART1) && CONFIG_MUTEK_PRINTK_ADDR == 0x40010400
@@ -158,7 +153,7 @@ static const char * const efm32_clock_names[EFM32_CLOCK_count] = {
 # ifdef EFM32_CLOCK_AUXHFRCO
     [EFM32_CLOCK_AUXHFRCO]   = "auxhfrco",
 # endif
-#if SERIE1
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
     [EFM32_CLOCK_HFRCODIV2]  = "hfrcodiv2",
     [EFM32_CLOCK_HFCLK]      = "hfclk",
     [EFM32_CLOCK_HFRADIOCLK] = "hfradioclk",
@@ -320,7 +315,7 @@ static const char * const efm32_clock_names[EFM32_CLOCK_count] = {
 #endif
 
 static const uint8_t efm32_en_bits[EFM32_CLOCK_count] = {
-#if SERIE1
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
     [EFM32_CLOCK_LE]       = EFM32_CMU_HFBUSCLKEN0_LE_SHIFT | 0x80,
     [EFM32_CLOCK_HFPERCLK] = EFM32_CMU_CTRL_HFPERCLKEN_SHIFT | 0x80,
 #ifdef EFM32_CLOCK_CRYPTO0
@@ -479,7 +474,7 @@ DRIVER_PV(struct efm32_recmu_private_s
 
   enum efm32_clock_node_e lfbclk_parent:8;
   enum efm32_clock_node_e lfbclk_new_parent:8;
-#if SERIE1
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
   enum efm32_clock_node_e lfeclk_parent:8;
   enum efm32_clock_node_e lfeclk_new_parent:8;
   enum efm32_clock_node_e lfrclk_parent:8;
@@ -512,7 +507,7 @@ DRIVER_PV(struct efm32_recmu_private_s
 #endif
 
   uint32_t lfclksel;            /* mux value of lfclksel (without gating) */
-#if SERIE1
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
   uint32_t lfaclksel;            /* mux value of lfclksel (without gating) */
   uint32_t lfbclksel;            /* mux value of lfclksel (without gating) */
   uint32_t lfeclksel;            /* mux value of lfclksel (without gating) */
@@ -520,7 +515,7 @@ DRIVER_PV(struct efm32_recmu_private_s
 #endif
 
   /** registers used for next config */
-#if SERIE1
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
   uint32_t r_hfcorepresc;
   uint32_t r_hfradiopresc;
   uint32_t r_hfperpresc;
@@ -654,7 +649,7 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
 #endif
 
     default:
-#if SERIE1
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
       /* HFCORECLK & childs */
       if (EFM32_CLK_MASK(node) & (EFM32_CLOCK_HFCORECLK_CHILDMASK | EFM32_CLK_MASK(EFM32_CLOCK_HFCORECLK)))
         {
@@ -716,7 +711,7 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
   /* get divider and parent of intermediate nodes */
   switch (node)
     {
-#if SERIE1
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
     case EFM32_CLOCK_HFCLK:
       div *= EFM32_CMU_HFPRESC_PRESC_GET(endian_le32(
         cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_HFPRESC_ADDR))) + 1;
@@ -724,9 +719,9 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
       break;
 #else
     case EFM32_CLOCK_HFCLKDIV:
-# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) \
-  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) \
-  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT)
+# if (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32LG) \
+  || (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32WG) \
+  || (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32GG)
       div *= EFM32_CMU_CTRL_HFCLKDIV_GET(endian_le32(
         cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_CTRL_ADDR))) + 1;
     case EFM32_CLOCK_HFCLK:
@@ -741,7 +736,7 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
     case EFM32_CLOCK_LFBCLK:
       node = pv->lfbclk_parent;
       break;
-#if SERIE1
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
     case EFM32_CLOCK_LFECLK:
       node = pv->lfeclk_parent;
       break;
@@ -756,7 +751,7 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
   /* compute frequency of root nodes */
   switch (node)
     {
-#if SERIE1
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
     case EFM32_CLOCK_HFRCODIV2:
       if (efm32_recmu_get_node_freq(pv, freq, NULL, EFM32_CLOCK_HFRCO))
         return -EINVAL;
@@ -766,14 +761,14 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
     case EFM32_CLOCK_LE:
       if (efm32_recmu_get_node_freq(pv, freq, NULL, EFM32_CLOCK_HFCORECLK))
         return -EINVAL;
-#if SERIE1
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
       div *= 2 << EFM32_CMU_HFPRESC_HFCLKLEPRESC_GET(endian_le32(
         cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_HFPRESC_ADDR)));
 #else
-# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) \
-  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) \
-  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT) \
-  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO)
+# if (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32LG) \
+  || (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32WG) \
+  || (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32GG) \
+  || (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32ZG)
       div *= 2 << EFM32_CMU_HFCORECLKDIV_HFCORECLKLEDIV_GET(endian_le32(
         cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_HFCORECLKDIV_ADDR)));
 # else
@@ -791,7 +786,7 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
       break;
 
     case EFM32_CLOCK_HFRCO: {
-#if SERIE1
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
       static const uint8_t hfrcoband[13] = {4, 0, 0, 7, 0, 0, 13, 16, 19, 0, 26, 32, 38};
       static const uint8_t hfrcoacc[13] = {0};
       uint_fast8_t band = EFM32_CMU_HFRCOCTRL_FREQRANGE_GET(endian_le32(
@@ -810,7 +805,7 @@ efm32_recmu_get_node_freq(struct efm32_recmu_private_s *pv,
 
 #ifdef EFM32_CLOCK_AUXHFRCO
     case EFM32_CLOCK_AUXHFRCO: {
-#if SERIE1
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
       static const uint8_t auxfrcoband[13] = {4, 0, 0, 7, 0, 0, 13, 16, 19, 0, 26, 32, 38};
       static const uint8_t auxfrcoacc[13] = {0};
       uint_fast8_t band = EFM32_CMU_AUXHFRCOCTRL_FREQRANGE_GET(endian_le32(
@@ -882,7 +877,7 @@ static DEV_CMU_CONFIG_OSC(efm32_recmu_config_osc)
         default:
           return -ENOTSUP;
         }
-#if SERIE1
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
       uint_fast8_t off;
       switch (freq->num)
         {
@@ -933,11 +928,11 @@ static DEV_CMU_CONFIG_OSC(efm32_recmu_config_osc)
         case 21000000:
           band = EFM32_CMU_HFRCOCTRL_BAND_21MHZ;
           break;
-# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) \
-  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) \
-  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT) \
-  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_TINY) \
-  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GECKO)
+# if (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32LG) \
+  || (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32WG) \
+  || (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32GG) \
+  || (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32TG) \
+  || (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32G)
         case 28000000:
           band = EFM32_CMU_HFRCOCTRL_BAND_28MHZ;
           break;
@@ -954,7 +949,7 @@ static DEV_CMU_CONFIG_OSC(efm32_recmu_config_osc)
       return 0;
     }
 
-#if SERIE1
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
       uint_fast8_t off;
       switch (freq->num)
         {
@@ -987,11 +982,11 @@ static DEV_CMU_CONFIG_OSC(efm32_recmu_config_osc)
         }
       pv->r_auxhfrcoctrl = cpu_mem_read_32(/* device information page */ 0xfe081b0 + off);
 #else
-# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) \
-  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) \
-  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT) \
-  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_TINY) \
-  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO)
+# if (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32LG) \
+  || (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32WG) \
+  || (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32GG) \
+  || (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32TG) \
+  || (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32ZG)
     case EFM32_CLOCK_AUXHFRCO: {
       switch (freq->denom)
         {
@@ -1020,10 +1015,10 @@ static DEV_CMU_CONFIG_OSC(efm32_recmu_config_osc)
         case 21000000:
           band = EFM32_CMU_AUXHFRCOCTRL_BAND_21MHZ;
           break;
-# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) \
-  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) \
-  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_TINY) \
-  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT)
+# if (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32LG) \
+  || (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32WG) \
+  || (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32TG) \
+  || (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32GG)
         case 28000000:
           band = EFM32_CMU_AUXHFRCOCTRL_BAND_28MHZ;
           break;
@@ -1082,7 +1077,7 @@ static DEV_CMU_CONFIG_MUX(efm32_recmu_config_mux)
 
   switch (node_id)
     {
-#if SERIE1
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
     case EFM32_CLOCK_HFCLK:
       {
           uint32_t d = ratio->denom;
@@ -1272,9 +1267,9 @@ static DEV_CMU_CONFIG_MUX(efm32_recmu_config_mux)
       pv->hfclk_new_parent = parent_id;
       break;
     }
-# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) \
-  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) \
-  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT)
+# if (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32LG) \
+  || (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32WG) \
+  || (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32GG)
     case EFM32_CLOCK_HFCLKDIV:
       if (parent_id != EFM32_CLOCK_HFCLK)
         return -ENOTSUP;
@@ -1316,10 +1311,10 @@ static DEV_CMU_CONFIG_MUX(efm32_recmu_config_mux)
         return -ENOTSUP;
         {
           uint32_t d = ratio->denom;
-# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) \
-  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) \
-  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT) \
-  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO)
+# if (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32LG) \
+  || (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32WG) \
+  || (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32GG) \
+  || (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32ZG)
           if (d != 2 && d != 4)
             return -ENOTSUP;
           EFM32_CMU_HFCORECLKDIV_HFCORECLKLEDIV_SETVAL(pv->r_hfcoreclkdiv, d == 4);
@@ -1368,11 +1363,11 @@ static DEV_CMU_CONFIG_MUX(efm32_recmu_config_mux)
         case EFM32_CLOCK_LFRCO:
           EFM32_CMU_LFCLKSEL_LFA_SET(pv->r_lfclksel, LFRCO);
           break;
-# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) \
-  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) \
-  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT) \
-  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_TINY) \
-  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO)
+# if (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32LG) \
+  || (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32WG) \
+  || (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32GG) \
+  || (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32TG) \
+  || (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32ZG)
         case EFM32_CLOCK_ULFRCO:
           EFM32_CMU_LFCLKSEL_LFA_SET(pv->r_lfclksel, DISABLED_OR_ULFRCO);
           EFM32_CMU_LFCLKSEL_LFAE_SET(pv->r_lfclksel, ULFRCO);
@@ -1399,11 +1394,11 @@ static DEV_CMU_CONFIG_MUX(efm32_recmu_config_mux)
         case EFM32_CLOCK_LFRCO:
           EFM32_CMU_LFCLKSEL_LFB_SET(pv->r_lfclksel, LFRCO);
           break;
-# if (CONFIG_EFM32_FAMILY == EFM32_FAMILY_LEOPARD) \
-  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_WONDER) \
-  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_GIANT) \
-  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_TINY) \
-  || (CONFIG_EFM32_FAMILY == EFM32_FAMILY_ZERO)
+# if (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32LG) \
+  || (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32WG) \
+  || (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32GG) \
+  || (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32TG) \
+  || (EFM32_MCU(CONFIG_EFM32_CFAMILY) == EFM32_MCU_EFM32ZG)
         case EFM32_CLOCK_ULFRCO:
           EFM32_CMU_LFCLKSEL_LFB_SET(pv->r_lfclksel, DISABLED_OR_ULFRCO);
           EFM32_CMU_LFCLKSEL_LFBE_SET(pv->r_lfclksel, ULFRCO);
@@ -1563,7 +1558,7 @@ struct efm32_recmu_deps_s
 };
 
 
-#if SERIE1
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
 #  define EFM32_RECMU_DEPS_COUNT 8
 #else
 #  define EFM32_RECMU_DEPS_COUNT 4
@@ -1573,7 +1568,7 @@ static const struct efm32_recmu_deps_s efm32_recmu_deps[EFM32_RECMU_DEPS_COUNT] 
   { EFM32_CLOCK_LFACLK_CHILDMASK,    EFM32_CLOCK_LFACLK,    EFM32_CMU_LFACLKEN0_ADDR },
   { EFM32_CLOCK_LFBCLK_CHILDMASK,    EFM32_CLOCK_LFBCLK,    EFM32_CMU_LFBCLKEN0_ADDR },
   { EFM32_CLOCK_HFPERCLK_CHILDMASK,  EFM32_CLOCK_HFPERCLK,  EFM32_CMU_HFPERCLKEN0_ADDR },
-#if SERIE1
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
   { EFM32_CLOCK_LFECLK_CHILDMASK,    EFM32_CLOCK_LFECLK,    EFM32_CMU_LFECLKEN0_ADDR },
   { EFM32_CLOCK_LFRCLK_CHILDMASK,    EFM32_CLOCK_LFRCLK,    EFM32_CMU_LFRCLKEN0_ADDR },
   { EFM32_CLOCK_HFBUSCLK_CHILDMASK,  EFM32_CLOCK_HFBUSCLK,  EFM32_CMU_HFBUSCLKEN0_ADDR },
@@ -1637,7 +1632,7 @@ static void efm32_recmu_clock_dep(struct efm32_recmu_private_s *pv,
 
   efm32_clock_mask_t m = mask ^ pv->dep_mask;
 
-#if SERIE1
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
   /* enable/disable EFM32_CLOCK_HFPERCLK */
   if (m & EFM32_CLK_MASK(EFM32_CLOCK_HFPERCLK))
     {
@@ -1726,7 +1721,7 @@ static void efm32_recmu_clock_dep(struct efm32_recmu_private_s *pv,
                    EFM32_CLK_MASK(EFM32_CLOCK_USBC) |
 #endif
                    EFM32_CLK_MASK(EFM32_CLOCK_LFACLK) |
-#if SERIE1
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
                    EFM32_CLK_MASK(EFM32_CLOCK_LFECLK) |
 #endif
                    EFM32_CLK_MASK(EFM32_CLOCK_LFBCLK));
@@ -1738,7 +1733,7 @@ static void efm32_recmu_clock_dep(struct efm32_recmu_private_s *pv,
   /* enable/disable EFM32_CLOCK_LE */
   if (m & EFM32_CLK_MASK(EFM32_CLOCK_LE))
     {
-#if SERIE1
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
       uint32_t x = endian_le32(cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_HFBUSCLKEN0_ADDR));
       EFM32_CMU_HFBUSCLKEN0_LE_SET(x, (mask >> EFM32_CLOCK_LE) & 1);
       cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_HFBUSCLKEN0_ADDR, endian_le32(x));
@@ -1794,7 +1789,7 @@ static DEV_CMU_COMMIT(efm32_recmu_commit)
   pv->lfaclk_parent = pv->lfaclk_new_parent;
   pv->lfbclk_parent = pv->lfbclk_new_parent;
   pv->hfclk_parent = pv->hfclk_new_parent;
-#if SERIE1
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
   pv->lfeclk_parent = pv->lfeclk_new_parent;
   pv->lfrclk_parent = pv->lfrclk_new_parent;
 #endif
@@ -1805,7 +1800,7 @@ static DEV_CMU_COMMIT(efm32_recmu_commit)
   efm32_recmu_clock_wait(pv);
 
   /* Write configuration to device registers */
-#if SERIE1
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
   cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_HFCOREPRESC_ADDR,
                   endian_le32(pv->r_hfcorepresc));
   cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_HFPERPRESC_ADDR,
@@ -1827,7 +1822,7 @@ static DEV_CMU_COMMIT(efm32_recmu_commit)
                   endian_le32(pv->r_auxhfrcoctrl));
 #endif
 
-#if SERIE1
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
   pv->lfaclksel = pv->r_lfaclksel;
   pv->lfbclksel = pv->r_lfbclksel;
   pv->lfeclksel = pv->r_lfeclksel;
@@ -1842,13 +1837,13 @@ static DEV_CMU_COMMIT(efm32_recmu_commit)
                   endian_le32(pv->r_lfapresc0));
   cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_LFBPRESC0_ADDR,
                   endian_le32(pv->r_lfbpresc0));
-#if SERIE1
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
   cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_LFEPRESC0_ADDR,
                   endian_le32(pv->r_lfepresc0));
   cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_LFRPRESC0_ADDR,
                   endian_le32(pv->r_lfrpresc0));
 #endif
-#if SERIE1
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
   cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_HFCLKSEL_ADDR,
                   endian_le32(pv->r_hfclksel));
   pv->r_hfclksel = 0;
@@ -1870,7 +1865,7 @@ static DEV_CMU_COMMIT(efm32_recmu_commit)
 #ifdef CONFIG_DEVICE_CLOCK_VARFREQ
   /* propagate changes in tree */
   if ((pv->chg_mask >> pv->hfclk_new_parent) & 1)
-#if SERIE1
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
     pv->chg_mask |= EFM32_CLK_MASK(EFM32_CLOCK_HFCLK)
 #else
     pv->chg_mask |= EFM32_CLK_MASK(EFM32_CLOCK_HFCLK)
@@ -1899,7 +1894,7 @@ static DEV_CMU_COMMIT(efm32_recmu_commit)
   if ((pv->chg_mask >> EFM32_CLOCK_LFBCLK) & 1)
     pv->chg_mask |= EFM32_CLOCK_LFBCLK_CHILDMASK;
 
-#if SERIE1
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
   if ((pv->chg_mask >> EFM32_CLOCK_LFECLK) & 1)
     pv->chg_mask |= EFM32_CLOCK_LFECLK_CHILDMASK;
   if ((pv->chg_mask >> EFM32_CLOCK_LFRCLK) & 1)
@@ -1934,7 +1929,7 @@ static DEV_CMU_COMMIT(efm32_recmu_commit)
 
 static void efm32_recmu_read_config(struct efm32_recmu_private_s *pv)
 {
-#if SERIE1
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
   pv->r_hfpresc = endian_le32(cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_HFPRESC_ADDR));
   pv->r_hfradiopresc = endian_le32(cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_HFRADIOPRESC_ADDR));
   pv->r_hfcorepresc = endian_le32(cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_HFCOREPRESC_ADDR));
@@ -1964,7 +1959,7 @@ static void efm32_recmu_read_config(struct efm32_recmu_private_s *pv)
 #endif
   pv->lfaclk_new_parent = pv->lfaclk_parent;
   pv->lfbclk_new_parent = pv->lfbclk_parent;
-#if SERIE1
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
   pv->lfeclk_new_parent = pv->lfeclk_parent;
   pv->lfrclk_new_parent = pv->lfrclk_parent;
 #endif
@@ -2015,7 +2010,7 @@ static DEV_CMU_NODE_INFO(efm32_recmu_node_info)
   if (*mask & DEV_CMU_INFO_PARENT)
     switch (node_id)
       {
-#if SERIE1
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
       case EFM32_CLOCK_LFECLK:
         info->parent_id = pv->lfeclk_parent;
         break;
@@ -2161,7 +2156,7 @@ static DEV_USE(efm32_recmu_use)
 #ifdef CONFIG_DRIVER_EFM32_RECMU_SLEEPDEEP
       efm32_recmu_clock_gate(pv, pv->use_mask);
 
-#if SERIE1
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
       if (!(pv->dep_mask & efm32_clock_em1_mask))
         cpu_mem_write_32(ARMV7M_SCR_ADDR, ARMV7M_SCR_SLEEPDEEP);
 #else
@@ -2287,7 +2282,7 @@ static DEV_INIT(efm32_recmu_init)
 #endif
     }
 
-#if SERIE1
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
   pv->lfaclksel = EFM32_CMU_LFACLKSEL_LFA(LFRCO);
   pv->lfbclksel = EFM32_CMU_LFBCLKSEL_LFB(LFRCO);
   pv->lfeclksel = EFM32_CMU_LFECLKSEL_LFE(LFRCO);

@@ -73,10 +73,10 @@ void efr32_radio_print_debug(char *p, struct radio_efr32_ctx_s *pv)
 
 void debug_toggle_pin()
 {
-#if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12
+#if EFM32_CONFIG(CONFIG_EFM32_CFAMILY) == 2  /* xg12 */
   uint32_t o = 2;
   uint32_t i = 4;
-#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG14
+#elif EFM32_CONFIG(CONFIG_EFM32_CFAMILY) == 4  /* xg14 */
   uint32_t o = 5;
   uint32_t i = 3;
 #else
@@ -94,7 +94,7 @@ void efr32_radio_debug_port(struct radio_efr32_ctx_s *pv, uint8_t val)
 
   uint32_t msk = (1 << bitcnt) - 1;
 
-#if CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12
+#if EFM32_CONFIG(CONFIG_EFM32_CFAMILY) == 2  /* xg12 */
   /* Set PC4 to output */
   uintptr_t a = 0x4000a004 + 2 * 0x30;
   uint32_t x = cpu_mem_read_32(a);
@@ -111,7 +111,7 @@ void efr32_radio_debug_port(struct radio_efr32_ctx_s *pv, uint8_t val)
 
   a = 0x4000a000 + 0xC + 1 * 0x30;
 
-#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG14
+#elif EFM32_CONFIG(CONFIG_EFM32_CFAMILY) == 4  /* xg14 */
   /* Set PF3 to PF7 in output */
   uintptr_t a = 0x4000a004 + 5 * 0x30;
   uint32_t x = cpu_mem_read_32(a);

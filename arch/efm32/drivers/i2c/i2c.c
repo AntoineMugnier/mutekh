@@ -454,8 +454,7 @@ DEV_INIT(efm32_i2c_init)
     goto err_queue;
   }
 
-#if (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG1) ||\
-    (CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFR_XG12)
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
   uint32_t enable = 0;
   uint32_t route = 0;
 
@@ -478,7 +477,7 @@ DEV_INIT(efm32_i2c_init)
 
   cpu_mem_write_32(pv->addr + EFM32_I2C_ROUTELOC0_ADDR, endian_le32(route));
   cpu_mem_write_32(pv->addr + EFM32_I2C_ROUTEPEN_ADDR, endian_le32(enable));
-#elif CONFIG_EFM32_ARCHREV == EFM32_ARCHREV_EFM
+#elif EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 0
   uint32_t route = EFM32_I2C_ROUTE_SCLPEN | EFM32_I2C_ROUTE_SDAPEN;
   EFM32_I2C_ROUTE_LOCATION_SETVAL(route, loc[0]);
   cpu_mem_write_32(pv->addr + EFM32_I2C_ROUTE_ADDR, endian_le32(route));
