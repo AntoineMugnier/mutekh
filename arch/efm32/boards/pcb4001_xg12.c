@@ -360,8 +360,8 @@ DEV_DECLARE_STATIC(dma_dev, "dma", 0, efm32_dma_drv,
 
 DEV_DECLARE_STATIC(usart_dev, "spi", 0, efm32_usart_spi_drv,
 
-# if (EFM32_CONFIG(CONFIG_EFM32_CFAMILY) == 0 || \ /* xg1 */
-     (EFM32_CONFIG(CONFIG_EFM32_CFAMILY) == 4      /* xg14 */
+# if EFM32_CONFIG(CONFIG_EFM32_CFAMILY) == 0 || /* xg1 */  \
+     EFM32_CONFIG(CONFIG_EFM32_CFAMILY) == 4      /* xg14 */
 
                    DEV_STATIC_RES_MEM(0x40010400, 0x40010800),
 # ifdef CONFIG_DEVICE_CLOCK
