@@ -111,63 +111,106 @@ static DEV_INIT(efm32_hwrand_init)
 
   CPU_INTERRUPT_SAVESTATE_DISABLE;
 
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 0
   /* Check that HFRC is still selected */
-  err = -EBUSY;
-  if ((cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_STATUS_ADDR) & EFM32_CMU_STATUS_HFRCOSEL))
+  if (!(cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_STATUS_ADDR) & EFM32_CMU_STATUS_HFRCOSEL))
     {
-      /* Enable LE clock */
-      uint32_t coreclken = cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_HFCORECLKEN0_ADDR);
-      cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_HFCORECLKEN0_ADDR, coreclken | EFM32_CMU_HFCORECLKEN0_LE);
-
-      /* Enable LFRCO */
-      cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_OSCENCMD_ADDR, EFM32_CMU_OSCENCMD_LFRCOEN);
-      while (!(cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_STATUS_ADDR) & EFM32_CMU_STATUS_LFRCORDY))
-        ;
-
-      uint32_t lfsel = cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_LFCLKSEL_ADDR);
-      cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_LFCLKSEL_ADDR, EFM32_CMU_LFCLKSEL_LFA(LFRCO));
-
-      /* Enable RTC clock */
-      uint32_t lfen = cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_LFACLKEN0_ADDR);
-      cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_LFACLKEN0_ADDR, lfen | EFM32_CMU_LFACLKEN0_RTC);
-
-      /* Start RTC */
-      cpu_mem_write_32(EFM32_RTC_ADDR + EFM32_RTC_FREEZE_ADDR, 0);
-      cpu_mem_write_32(EFM32_RTC_ADDR + EFM32_RTC_CTRL_ADDR, EFM32_RTC_CTRL_EN_COUNT);
-
-      /* Start collecting random data */
-      err = -EIO;
-      uint32_t x = efm32_hw_rand32();
-      if (x != HWRAND_CRC32_ALL1 &&
-          x != HWRAND_CRC32_ALL0)
-        {
-          err = -ENOMEM;
-          struct efm32_hwrand_private_s *pv = mem_alloc(sizeof (*pv) + size, (mem_scope_sys));
-
-          if (pv)
-            {
-              dev->drv_pv = pv;
-              pv->ptr = 0;
-              pv->size = size;
-
-              uint8_t *p = pv->pool;
-              endian_le32_na_store(p, x);
-              for (p += 4; size > 4; (p += 4), (size -= 4))
-                endian_le32_na_store(p, efm32_hw_rand32());
-
-              err = 0;
-            }
-        }
-
-      /* Stop RTC */
-      cpu_mem_write_32(EFM32_RTC_ADDR + EFM32_RTC_CTRL_ADDR, 0);
-
-      /* Restore clocks state */
-      cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_LFACLKEN0_ADDR, lfen);
-      cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_HFCORECLKEN0_ADDR, coreclken);
-      cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_LFCLKSEL_ADDR, lfsel);
+      err = -EBUSY;
+      goto done;
     }
 
+  /* Enable LE clock */
+  uint32_t coreclken = cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_HFCORECLKEN0_ADDR);
+  cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_HFCORECLKEN0_ADDR, coreclken | EFM32_CMU_HFCORECLKEN0_LE);
+
+  /* Enable LFRCO */
+  cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_OSCENCMD_ADDR, EFM32_CMU_OSCENCMD_LFRCOEN);
+  while (!(cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_STATUS_ADDR) & EFM32_CMU_STATUS_LFRCORDY))
+    ;
+
+  uint32_t lfsel = cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_LFCLKSEL_ADDR);
+  cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_LFCLKSEL_ADDR, EFM32_CMU_LFCLKSEL_LFA(LFRCO));
+
+  /* Enable RTC clock */
+  uint32_t lfen = cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_LFACLKEN0_ADDR);
+  cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_LFACLKEN0_ADDR, lfen | EFM32_CMU_LFACLKEN0_RTC);
+
+  /* Start RTC */
+  cpu_mem_write_32(EFM32_RTC_ADDR + EFM32_RTC_FREEZE_ADDR, 0);
+  cpu_mem_write_32(EFM32_RTC_ADDR + EFM32_RTC_CTRL_ADDR, EFM32_RTC_CTRL_EN_COUNT);
+
+#elif EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
+  /* Check that HFRC is still selected */
+  if (cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_HFCLKSTATUS_ADDR)
+      != EFM32_CMU_HFCLKSTATUS_SELECTED_HFRCO)
+    {
+      err = -EBUSY;
+      goto done;
+    }
+
+  /* Enable LFRCO */
+  cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_OSCENCMD_ADDR, EFM32_CMU_OSCENCMD_LFRCOEN);
+  while (!(cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_STATUS_ADDR) & EFM32_CMU_STATUS_LFRCORDY))
+    ;
+
+  /* Select as source for RTCC */
+  uint32_t lfeclksel = cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_LFECLKSEL_ADDR);
+  cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_LFECLKSEL_ADDR, EFM32_CMU_LFECLKSEL_LFE(LFRCO));
+
+  /* Enable RTCC clock */
+  uint32_t lfclken = cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_LFECLKEN0_ADDR);
+  cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_LFECLKEN0_ADDR, EFM32_CMU_LFECLKEN0_RTCC);
+
+  /* Start RTCC */
+  cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_CTRL_ADDR, EFM32_RTCC_CTRL_ENABLE);
+#else
+# error
+#endif
+
+  /* Start collecting random data */
+  err = -EIO;
+  uint32_t x = efm32_hw_rand32();
+  if (x != HWRAND_CRC32_ALL1 &&
+      x != HWRAND_CRC32_ALL0)
+    {
+      err = -ENOMEM;
+      struct efm32_hwrand_private_s *pv = mem_alloc(sizeof (*pv) + size, (mem_scope_sys));
+
+      if (pv)
+        {
+          dev->drv_pv = pv;
+          pv->ptr = 0;
+          pv->size = size;
+
+          uint8_t *p = pv->pool;
+          endian_le32_na_store(p, x);
+          for (p += 4; size > 4; (p += 4), (size -= 4))
+            endian_le32_na_store(p, efm32_hw_rand32());
+
+          err = 0;
+        }
+    }
+
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 0
+  /* Stop RTC */
+  cpu_mem_write_32(EFM32_RTC_ADDR + EFM32_RTC_CTRL_ADDR, 0);
+
+  /* Restore clocks state */
+  cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_LFACLKEN0_ADDR, lfen);
+  cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_HFCORECLKEN0_ADDR, coreclken);
+  cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_LFCLKSEL_ADDR, lfsel);
+
+#elif EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
+  /* Stop RTCC */
+  cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_CTRL_ADDR, 0);
+
+  cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_LFECLKSEL_ADDR, lfeclksel);
+  cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_LFECLKEN0_ADDR, lfclken);
+#else
+# error
+#endif
+
+ done:;
   CPU_INTERRUPT_RESTORESTATE;
   return err;
 }

@@ -46,7 +46,11 @@ FUNC_START(.text, efm32_hw_rand32)
 
 .loop:
         /* read current RTC value */
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 0
 	ldr	r5, = EFM32_RTC_ADDR + EFM32_RTC_CNT_ADDR
+#elif EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
+	ldr	r5, = EFM32_RTCC_ADDR + EFM32_RTCC_CNT_ADDR
+#endif
 	ldr	r7, [r5]
 
 	movs	r3, #0
