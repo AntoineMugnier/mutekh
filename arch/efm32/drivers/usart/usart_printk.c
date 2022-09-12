@@ -123,7 +123,13 @@ void efm32_usart_printk_init(void)
 
 #if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
 
-#define USART_CLOCK            38400000
+  uint32_t USART_CLOCK;
+
+  x = cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_HFCLKSTATUS_ADDR);
+  if (EFM32_CMU_HFCLKSTATUS_SELECTED_GET(x) == EFM32_CMU_HFCLKSTATUS_SELECTED_HFXO)
+    USART_CLOCK = 38400000;
+  else
+    USART_CLOCK = 19000000;
 
   /* Enable clock for HF peripherals */
   x = cpu_mem_read_32(b + EFM32_CMU_CTRL_ADDR);
