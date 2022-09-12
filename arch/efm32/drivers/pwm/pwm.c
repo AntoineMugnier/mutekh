@@ -326,9 +326,6 @@ static DEV_INIT(efm32_pwm_init)
   cpu_mem_write_32(pv->addr + EFM32_TIMER_CTRL_ADDR,
                    endian_le32(EFM32_TIMER_CTRL_MODE(UP) |
                                EFM32_TIMER_CTRL_CLKSEL(PRESCHFPERCLK) |
-                               EFM32_TIMER_CTRL_SYNC(NONE) |
-                               EFM32_TIMER_CTRL_RISEA(NONE) |
-                               EFM32_TIMER_CTRL_FALLA(NONE) |
                                EFM32_TIMER_CTRL_PRESC(DIV1)));
 
   /* setup pinmux */
@@ -341,17 +338,32 @@ static DEV_INIT(efm32_pwm_init)
   for (uint8_t i = 0; i < EFM32_PWM_CHANNEL_MAX; i++)
     cpu_mem_write_32(pv->addr + EFM32_TIMER_CC_CTRL_ADDR(i), endian_le32(x));
 
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
+  uint32_t route_loc = 0, route_pen = 0;
+#elif EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 0
   uint32_t route = 0;
+#endif
+
   for (uint8_t i = 0; i < EFM32_PWM_CHANNEL_MAX; i++)
     {
       if (loc[i] != IOMUX_INVALID_DEMUX)
         {
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
+          route_pen |= EFM32_TIMER_ROUTEPEN_CCPEN(i);
+          route_loc |= EFM32_TIMER_ROUTELOC0_CCLOC(i, loc[i]);
+#elif EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 0
           EFM32_TIMER_ROUTE_LOCATION_SETVAL(route, loc[i]);
           route |= EFM32_TIMER_ROUTE_CCPEN(i);
+#endif
         }
     }
 
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
+  cpu_mem_write_32(pv->addr + EFM32_TIMER_ROUTEPEN_ADDR, endian_le32(route_pen));
+  cpu_mem_write_32(pv->addr + EFM32_TIMER_ROUTELOC0_ADDR, endian_le32(route_loc));
+#elif EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 0
   cpu_mem_write_32(pv->addr + EFM32_TIMER_ROUTE_ADDR, endian_le32(route));
+#endif
 
 #ifdef CONFIG_DEVICE_CLOCK_GATING
   dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
