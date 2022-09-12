@@ -25,7 +25,6 @@
 
 #include <hexo/types.h>
 #include <hexo/iospace.h>
-#include <hexo/endian.h>
 
 #include <device/device.h>
 #include <device/resources.h>
@@ -36,53 +35,79 @@
 
 #include <mutek/mem_alloc.h>
 #include <mutek/kroutine.h>
+#include <mutek/printk.h>
 
 #include <arch/efm32/rtc.h>
 #include <arch/efm32/devaddr.h>
 
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 0
 #define EFM32_RTC_HW_WIDTH 24
 #define EFM32_RTC_HW_MASK  0xffffff
 #define EFM32_RTC_SW_MASK  0xffffffffff000000ULL
 
+#elif EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
+#define EFM32_RTC_HW_WIDTH 32
+#define EFM32_RTC_HW_MASK  0xffffffff
+#define EFM32_RTC_SW_MASK  0xffffffff00000000ULL
+
+#else
+# error
+#endif
+
 DRIVER_PV(struct efm32_rtc_private_s
 {
-#ifdef CONFIG_DEVICE_CLOCK
+#if defined(CONFIG_DEVICE_CLOCK) || EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
   dev_timer_cfgrev_t rev;
 #endif
-#ifdef CONFIG_DEVICE_IRQ
+
   /* Timer Software value */
   uint32_t swvalue;
   /* Interrupt endpoint */
   struct dev_irq_src_s irq_eps;
   /* Request queue */
   dev_request_pqueue_root_t queue;
-#endif
 
   struct dev_clock_sink_ep_s clk_ep;
   struct dev_freq_s freq;
 
   enum dev_timer_capabilities_e cap:8;
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
+  uint8_t prescaler:4;
+#endif
 });
 
 /* This function starts the hardware rtc counter. */
-static inline void efm32_rtc_start_counter(struct efm32_rtc_private_s *pv)
+static void efm32_rtc_start_counter(struct efm32_rtc_private_s *pv)
 {
 #ifdef CONFIG_DEVICE_CLOCK_GATING
   dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER_CLOCK);
 #endif
+
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 0
   while (cpu_mem_read_32(EFM32_RTC_ADDR + EFM32_RTC_SYNCBUSY_ADDR) &
-         endian_le32(EFM32_RTC_SYNCBUSY_CTRL))
+         EFM32_RTC_SYNCBUSY_CTRL)
     ;
-  cpu_mem_write_32(EFM32_RTC_ADDR + EFM32_RTC_CTRL_ADDR, endian_le32(EFM32_RTC_CTRL_EN(COUNT)));
+  cpu_mem_write_32(EFM32_RTC_ADDR + EFM32_RTC_CTRL_ADDR, EFM32_RTC_CTRL_EN(COUNT));
+
+#elif EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
+  cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_CTRL_ADDR,
+        EFM32_RTCC_CTRL_ENABLE | (pv->prescaler << EFM32_RTCC_CTRL_CNTPRESC_SHIFT));
+#endif
 }
 
 /* This function stops the hardware rtc counter. */
-static inline void efm32_rtc_stop_counter(struct efm32_rtc_private_s *pv)
+static void efm32_rtc_stop_counter(struct efm32_rtc_private_s *pv)
 {
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 0
   while (cpu_mem_read_32(EFM32_RTC_ADDR + EFM32_RTC_SYNCBUSY_ADDR) &
-         endian_le32(EFM32_RTC_SYNCBUSY_CTRL))
+         EFM32_RTC_SYNCBUSY_CTRL)
     ;
   cpu_mem_write_32(EFM32_RTC_ADDR + EFM32_RTC_CTRL_ADDR, 0);
+
+#elif EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
+  cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_CTRL_ADDR, 0);
+#endif
+
 #ifdef CONFIG_DEVICE_CLOCK_GATING
   dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
 #endif
@@ -94,29 +119,39 @@ static inline void efm32_rtc_stop_counter(struct efm32_rtc_private_s *pv)
    most recent rtc value. */
 static uint64_t get_timer_value(struct efm32_rtc_private_s *pv)
 {
-  uint64_t value = endian_le32(cpu_mem_read_32(EFM32_RTC_ADDR + EFM32_RTC_CNT_ADDR));
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 0
+  uint64_t value = cpu_mem_read_32(EFM32_RTC_ADDR + EFM32_RTC_CNT_ADDR);
+#elif EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
+  uint64_t value = cpu_mem_read_32(EFM32_RTCC_ADDR + EFM32_RTCC_CNT_ADDR);
+#endif
 
-#ifdef CONFIG_DEVICE_IRQ
   if (value < EFM32_RTC_HW_MASK / 2)      /* check if a wrap just occured */
     {
-      uint32_t x = endian_le32(cpu_mem_read_32(EFM32_RTC_ADDR + EFM32_RTC_IF_ADDR));
+# if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 0
+      uint32_t x = cpu_mem_read_32(EFM32_RTC_ADDR + EFM32_RTC_IF_ADDR);
       if (x & EFM32_RTC_IF_OF)
         value += 1ULL << EFM32_RTC_HW_WIDTH;
+
+# elif EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
+      uint32_t x = cpu_mem_read_32(EFM32_RTCC_ADDR + EFM32_RTCC_IF_ADDR);
+      if (x & EFM32_RTCC_IF_OF)
+        value += 1ULL << EFM32_RTC_HW_WIDTH;
+# endif
     }
 
   return value + ((uint64_t)pv->swvalue << EFM32_RTC_HW_WIDTH);
-#else
-  return value;
-#endif
 }
 
-#ifdef CONFIG_DEVICE_IRQ
-
-/* This function disables the interruption associated to compare/capture
+/* This function disables the interrupt associated to compare/capture
    channel 0. */
 static inline void efm32_rtc_disable_compare(struct efm32_rtc_private_s *pv)
 {
-  cpu_mem_write_32(EFM32_RTC_ADDR + EFM32_RTC_IEN_ADDR, endian_le32(EFM32_RTC_IEN_OF));
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 0
+  cpu_mem_write_32(EFM32_RTC_ADDR + EFM32_RTC_IEN_ADDR, EFM32_RTC_IEN_OF);
+
+#elif EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
+  cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_IEN_ADDR, EFM32_RTCC_IEN_OF);
+#endif
 }
 
 static void efm32_rtc_request_start(struct efm32_rtc_private_s *pv,
@@ -127,29 +162,52 @@ static void efm32_rtc_request_start(struct efm32_rtc_private_s *pv,
   if (((rq->deadline ^ value) & EFM32_RTC_SW_MASK))
     return;
 
-  uint32_t d = rq->deadline & EFM32_RTC_COMP0_MASK;
-  uint32_t s = 5;
+  uint32_t d = rq->deadline & EFM32_RTC_HW_MASK;
+  uint32_t s = 0;
 
-  /* enable compare interrupt */
-  cpu_mem_write_32(EFM32_RTC_ADDR + EFM32_RTC_IEN_ADDR, endian_le32(EFM32_RTC_IEN_COMP0 | EFM32_RTC_IEN_OF));
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 0
+
+  cpu_mem_write_32(EFM32_RTC_ADDR + EFM32_RTC_IEN_ADDR,
+                   EFM32_RTC_IEN_COMP0 | EFM32_RTC_IEN_OF);
 
   do {
-    /* write deadline in Compare 0 channel */
+    /* write deadline in Compare */
     while (cpu_mem_read_32(EFM32_RTC_ADDR + EFM32_RTC_SYNCBUSY_ADDR) &
-           endian_le32(EFM32_RTC_SYNCBUSY_COMP0))
+           EFM32_RTC_SYNCBUSY_COMP0)
       ;
 
-    cpu_mem_write_32(EFM32_RTC_ADDR + EFM32_RTC_COMP0_ADDR, endian_le32(d + s));
+    cpu_mem_write_32(EFM32_RTC_ADDR + EFM32_RTC_COMP0_ADDR, d + s);
 
-    /* hw compare for == only, check for race condition */
     uint32_t c = cpu_mem_read_32(EFM32_RTC_ADDR + EFM32_RTC_CNT_ADDR);
 
-    if ((d - c /* LE domain write skew */ - 4) & (1 << (EFM32_RTC_HW_WIDTH - 1)))
+    /* hw compare for == only, check for race condition */
+    if ((d - c /* LE domain write skew */ - 1) & (1 << (EFM32_RTC_HW_WIDTH - 1)))
       {
-        s *= 2;
+        s = s * 2 + 1;
         continue;
       }
   } while (0);
+
+#elif EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
+
+  cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_IEN_ADDR,
+                   EFM32_RTCC_IEN_CC(0) | EFM32_RTCC_IEN_OF);
+
+  do {
+    cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_CC_CCV_ADDR(0), d + s);
+
+    uint32_t c = cpu_mem_read_32(EFM32_RTCC_ADDR + EFM32_RTCC_CNT_ADDR);
+
+    /* hw compare for == only, check for race condition */
+    if (((uint64_t)d - c - 1) & (1ULL << (EFM32_RTC_HW_WIDTH - 1)))
+      {
+        s = s * 2 + 1;
+        continue;
+      }
+  } while (0);
+#endif
+
+  logk_trace("rtc skew %u", s);
 }
 
 static DEV_IRQ_SRC_PROCESS(efm32_rtc_irq)
@@ -159,17 +217,27 @@ static DEV_IRQ_SRC_PROCESS(efm32_rtc_irq)
  
   lock_spin(&dev->lock);
 
-  uint64_t value = endian_le32(cpu_mem_read_32(EFM32_RTC_ADDR + EFM32_RTC_CNT_ADDR));
-  uint32_t irq = endian_le32(cpu_mem_read_32(EFM32_RTC_ADDR + EFM32_RTC_IF_ADDR))
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 0
+  uint64_t value = cpu_mem_read_32(EFM32_RTC_ADDR + EFM32_RTC_CNT_ADDR);
+  uint32_t irq = cpu_mem_read_32(EFM32_RTC_ADDR + EFM32_RTC_IF_ADDR)
     & (EFM32_RTC_IF_COMP0 | EFM32_RTC_IF_OF);
+
+  cpu_mem_write_32(EFM32_RTC_ADDR + EFM32_RTC_IFC_ADDR, irq);
+
+#elif EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
+  uint64_t value = cpu_mem_read_32(EFM32_RTCC_ADDR + EFM32_RTCC_CNT_ADDR);
+  uint32_t irq = cpu_mem_read_32(EFM32_RTCC_ADDR + EFM32_RTCC_IF_ADDR)
+    & (EFM32_RTCC_IF_CC(0) | EFM32_RTCC_IF_OF);
+
+  cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_IFC_ADDR, irq);
+#endif
 
   if (irq)
     {
-      cpu_mem_write_32(EFM32_RTC_ADDR + EFM32_RTC_IFC_ADDR, endian_le32(irq));
-
       if (dev->start_count == 0)
         goto err;
 
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 0
       /* Compare channel interrupt */
       if (irq & EFM32_RTC_IF_COMP0)
         efm32_rtc_disable_compare(pv);
@@ -177,6 +245,15 @@ static DEV_IRQ_SRC_PROCESS(efm32_rtc_irq)
       /* Update the software part of the counter */
       if (irq & EFM32_RTC_IF_OF)
         {
+
+#elif EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
+      if (irq & EFM32_RTCC_IF_CC(0))
+        efm32_rtc_disable_compare(pv);
+
+      /* Update the software part of the counter */
+      if (irq & EFM32_RTCC_IF_OF)
+        {
+#endif
           pv->swvalue++;
           if (value > EFM32_RTC_HW_MASK / 2)      /* wrap just occured */
             value = 0;
@@ -215,11 +292,9 @@ static DEV_IRQ_SRC_PROCESS(efm32_rtc_irq)
  err:
   lock_release(&dev->lock);
 }
-#endif
 
 static DEV_TIMER_CANCEL(efm32_rtc_cancel)
 {
-#ifdef CONFIG_DEVICE_IRQ
   struct device_s *dev = accessor->dev;
   struct efm32_rtc_private_s *pv = dev->drv_pv;
   error_t err = -ETIMEDOUT;
@@ -244,7 +319,11 @@ static DEV_TIMER_CANCEL(efm32_rtc_cancel)
           if (rqnext != NULL)
             {
               /* start next request, raise irq on race condition */
-              cpu_mem_write_32(EFM32_RTC_ADDR + EFM32_RTC_IFC_ADDR, endian_le32(EFM32_RTC_IFC_COMP0));
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 0
+              cpu_mem_write_32(EFM32_RTC_ADDR + EFM32_RTC_IFC_ADDR, EFM32_RTC_IFC_COMP0);
+#elif EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
+              cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_IFC_ADDR, EFM32_RTCC_IFC_CC(0));
+#endif
               efm32_rtc_request_start(pv, rqnext, get_timer_value(pv));
             }
           else
@@ -261,16 +340,12 @@ static DEV_TIMER_CANCEL(efm32_rtc_cancel)
   LOCK_RELEASE_IRQ(&dev->lock);
 
   return err;
-#else
-  return -ENOTSUP;
-#endif
 }
 
 #include <mutek/scheduler.h>
 
 static DEV_TIMER_REQUEST(efm32_rtc_request)
 {
-#ifdef CONFIG_DEVICE_IRQ
   struct device_s *dev = accessor->dev;
   struct efm32_rtc_private_s *pv = dev->drv_pv;
   error_t err = 0;
@@ -304,7 +379,11 @@ static DEV_TIMER_REQUEST(efm32_rtc_request)
       /* start request, raise irq on race condition */
       if (dev_timer_rq_prev(&pv->queue, rq) == NULL)
         {
-          cpu_mem_write_32(EFM32_RTC_ADDR + EFM32_RTC_IFC_ADDR, endian_le32(EFM32_RTC_IFC_COMP0));
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 0
+          cpu_mem_write_32(EFM32_RTC_ADDR + EFM32_RTC_IFC_ADDR, EFM32_RTC_IFC_COMP0);
+#elif EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
+          cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_IFC_ADDR, EFM32_RTCC_IFC_CC(0));
+#endif
           efm32_rtc_request_start(pv, rq, value);
         }
 
@@ -316,9 +395,6 @@ static DEV_TIMER_REQUEST(efm32_rtc_request)
   LOCK_RELEASE_IRQ(&dev->lock);
 
   return err;
-#else
-  return -ENOTSUP;
-#endif
 }
 
 static DEV_USE(efm32_rtc_use)
@@ -384,6 +460,7 @@ static DEV_TIMER_CONFIG(efm32_rtc_config)
 {
   struct device_s *dev = accessor->dev;
   struct efm32_rtc_private_s *pv = dev->drv_pv;
+  uint32_t r = 1;
 
   error_t err = 0;
 
@@ -392,25 +469,48 @@ static DEV_TIMER_CONFIG(efm32_rtc_config)
   if (cfg)
     cfg->freq = pv->freq;
 
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 0
   if (res > 1)
     err = -ERANGE;
+#elif EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
+  if (res)
+    {
+      if (dev->start_count)
+        {
+          err = -EBUSY;
+          r = res;
+        }
+      else
+        {
+          /* div is either set to maximum value 10 or rounded down to the nearest power of 2 */
+          uint_fast8_t div = res > 32768 ? 15 : bit_msb_index(res);
+          pv->prescaler = div;
+
+          r = 1 << div;
+          if (r != res)
+            err = -ERANGE;
+
+          pv->rev += 2;
+        }
+    }
+  else
+    {
+      r = 1 << pv->prescaler;
+    }
+#endif
 
   if (cfg)
     {
-#ifdef CONFIG_DEVICE_CLOCK
+#if defined(CONFIG_DEVICE_CLOCK) || EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
       cfg->rev = pv->rev;
 #else
       cfg->rev = 1;
 #endif
       cfg->cap = pv->cap;
-      cfg->res = 1;
+      cfg->res = r;
       cfg->cap |= DEV_TIMER_CAP_STOPPABLE | DEV_TIMER_CAP_HIGHRES | DEV_TIMER_CAP_KEEPVALUE | DEV_TIMER_CAP_TICKLESS;
-#ifdef CONFIG_DEVICE_IRQ
       cfg->cap |= DEV_TIMER_CAP_REQUEST;
       cfg->max = 0xffffffffffffffffULL;
-#else
-      cfg->max = EFM32_RTC_HW_MASK;
-#endif
     }
 
   LOCK_RELEASE_IRQ(&dev->lock);
@@ -424,10 +524,6 @@ static DEV_TIMER_CONFIG(efm32_rtc_config)
 static DEV_INIT(efm32_rtc_init)
 {
   struct efm32_rtc_private_s  *pv;
-
-  __unused__ uintptr_t addr = 0;
-  assert(device_res_get_uint(dev, DEV_RES_MEM, 0, &addr, NULL) == 0 &&
-         EFM32_RTC_ADDR == addr);
 
   pv = mem_alloc(sizeof(struct efm32_rtc_private_s), (mem_scope_sys));
 
@@ -451,31 +547,29 @@ static DEV_INIT(efm32_rtc_init)
 # endif
 #endif
 
-#ifdef CONFIG_DEVICE_IRQ
   device_irq_source_init(dev, &pv->irq_eps, 1, efm32_rtc_irq);
 
   if (device_irq_source_link(dev, &pv->irq_eps, 1, 1))
     goto err_clk;
 
   dev_rq_pqueue_init(&pv->queue);
-#endif
-
-#ifdef CONFIG_DEVICE_IRQ
-  /* Clear interrupts */
-  cpu_mem_write_32(EFM32_RTC_ADDR + EFM32_RTC_IFC_ADDR, endian_le32(EFM32_RTC_IFC_MASK));
-
-  /* Enable Overflow interrupts */
-  cpu_mem_write_32(EFM32_RTC_ADDR + EFM32_RTC_IEN_ADDR, endian_le32(EFM32_RTC_IEN_OF));
 
   pv->swvalue = 0;
-#else
-  cpu_mem_write_32(EFM32_RTC_ADDR + EFM32_RTC_IEN_ADDR, 0);
-#endif
 
-  /* Ctrl register configuration */
-  cpu_mem_write_32(EFM32_RTC_ADDR + EFM32_RTC_CTRL_ADDR, endian_le32(EFM32_RTC_CTRL_DEBUGRUN(FROZEN) |
-                                                               EFM32_RTC_CTRL_EN(RESET) |
-                                                               EFM32_RTC_CTRL_COMP0TOP(TOPMAX)));
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 0
+
+  cpu_mem_write_32(EFM32_RTC_ADDR + EFM32_RTC_IFC_ADDR, EFM32_RTC_IFC_MASK);
+  cpu_mem_write_32(EFM32_RTC_ADDR + EFM32_RTC_IEN_ADDR, EFM32_RTC_IEN_OF);
+  cpu_mem_write_32(EFM32_RTC_ADDR + EFM32_RTC_CTRL_ADDR, 0);
+
+#elif EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
+  cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_IFC_ADDR, EFM32_RTCC_IFC_MASK);
+  cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_IEN_ADDR, EFM32_RTCC_IEN_OF);
+  cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_CTRL_ADDR, 0);
+  cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_CNT_ADDR, 0);
+  cpu_mem_write_32(EFM32_RTCC_ADDR + EFM32_RTCC_CC_CTRL_ADDR(0),
+                   EFM32_RTCC_CC_CTRL_MODE_SHIFT_VAL(OUTPUTCOMPARE));
+#endif
 
 #ifdef CONFIG_DEVICE_CLOCK_GATING
   dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER);
@@ -496,11 +590,9 @@ static DEV_CLEANUP(efm32_rtc_cleanup)
 
   dev_drv_clock_cleanup(dev, &pv->clk_ep);
 
-#ifdef CONFIG_DEVICE_IRQ
   dev_rq_pqueue_destroy(&pv->queue);
 
   device_irq_source_unlink(dev, &pv->irq_eps, 1);
-#endif
 
   mem_free(pv);
 
