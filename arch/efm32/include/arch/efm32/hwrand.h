@@ -1,6 +1,7 @@
 
 #include <hexo/types.h>
 
+/** see hwrand.S */
 uint32_t efm32_hw_rand32(void);
 
 #define HWRAND_CRC32_POLY 0xe12390be

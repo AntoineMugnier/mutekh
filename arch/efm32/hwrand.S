@@ -23,8 +23,7 @@
 #include <arch/efm32/devaddr.h>
 #include <arch/efm32/rtc.h>
 #include <arch/efm32/cmu.h>
-
-#include "hwrand.h"
+#include <arch/efm32/hwrand.h>
 
 .syntax unified
 

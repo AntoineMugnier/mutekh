@@ -26,14 +26,13 @@
 #include <arch/efm32/cmu.h>
 #include <arch/efm32/rtc.h>
 #include <arch/efm32/devaddr.h>
+#include <arch/efm32/hwrand.h>
 
 #include <mutek/mem_alloc.h>
 #include <device/device.h>
 #include <device/resources.h>
 #include <device/driver.h>
 #include <device/class/crypto.h>
-
-#include "hwrand.h"
 
 DRIVER_PV(struct efm32_hwrand_private_s
 {
