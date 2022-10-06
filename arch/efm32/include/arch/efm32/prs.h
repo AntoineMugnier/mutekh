@@ -11,6 +11,7 @@
 #  include "s1/xg12/prs.h"      /* FIXME */
 # else
 #  error not supported
+# endif
 #else
 # error not supported
 #endif
