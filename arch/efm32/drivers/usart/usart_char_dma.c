@@ -19,6 +19,28 @@
     Copyright Sebastien Cerdan <sebcerdan@gmail.com> (c) 2017
 */
 
+/*
+DEV_DECLARE_STATIC(usart1_dev, "uart_mux", 0, efm32_usart_dma_drv,
+                   DEV_STATIC_RES_MEM(0x4000c400, 0x4000c800),
+
+                   DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_USART1, 0),
+		   DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_TIMER1, 1),
+		   DEV_STATIC_RES_CLK_SRC("/recmu", EFM32_CLOCK_PRS, 2),
+
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
+                   DEV_STATIC_RES_MEM(0x40010400, 0x40010800),
+                   DEV_STATIC_RES_IRQ(0, EFM32_IRQ_TIMER1, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
+                   DEV_STATIC_RES_DEV_PARAM("dma", "/dma"),
+                   DEV_STATIC_RES_DMA((1 << 0), EFM32_DMA_SOURCE_USART1),
+                   DEV_STATIC_RES_DMA((1 << 1), EFM32_DMA_SOURCE_USART1),
+
+                   DEV_STATIC_RES_DEV_IOMUX("/gpio"),
+                   DEV_STATIC_RES_IOMUX("rx", EFM32_LOC1, EFM32_PD1, 0, 0),
+                   DEV_STATIC_RES_IOMUX("tx", EFM32_LOC1, EFM32_PD0, 0, 0),
+                   DEV_STATIC_RES_UART(9600, 8, 0, 0, 0)
+                   );
+*/
+
 #define LOGK_MODULE_ID "ecdu"
 
 #include <hexo/types.h>
@@ -53,15 +75,30 @@
 
 #include <cpu/arm32m/pl230_channel.h>
 
+#if CONFIG_DEVICE_START_LOG2INC < 2
+# error
+#endif
+
 enum efm32_usart_start_e
 {
   EFM32_USART_STARTED_READ = 1,
   EFM32_USART_STARTED_WRITE = 2,
 };
 
+enum efm32_usart_rx_dma_state_s
+{
+  EFM32_USART_RX_DESC_0 = 0,
+  EFM32_USART_RX_DESC_1 = 1,
+  EFM32_USART_RX_STOPPED = 2,
+};
+
 DRIVER_PV(struct efm32_usart_context_s
 {
-  uintptr_t addr;
+  struct device_s               *dev;
+
+  uintptr_t usart_addr;
+  uintptr_t timer_addr;
+
   /* tty input request queue and char fifo */
   dev_request_queue_root_t	read_q;
   dev_request_queue_root_t	write_q;
@@ -74,18 +111,20 @@ DRIVER_PV(struct efm32_usart_context_s
   struct dev_dma_desc_s         dma_wr_desc;
 
   struct device_dma_s           dma;
-  struct device_s               *usart;
-  bool_t                        dma_started;
 
-  uintptr_t                     timer_addr;
-  struct dev_irq_src_s          irq_ep[2];
+  struct dev_irq_src_s          irq_ep;
+
   uint8_t                       rx_buffer[CONFIG_DRIVER_EFM32_USART_CHAR_DMA_FIFO_SIZE];
-  uint8_t                       *rptr;
-  uint8_t                       *wptr;
-  uint8_t                       pid:1;
-  uint8_t                       err:1;
+  /* next data available for copy to read requests */
+  uint16_t                      rx_rptr;
+  /* amount of data that is available */
+  uint16_t                      rx_size;
+  bool_t                        rx_overflow:1;
+  enum efm32_usart_rx_dma_state_s rx_state:2;
+  enum efm32_usart_start_e      enabled:2;
+
   struct dev_freq_s             timer_freq;
-  struct dev_clock_sink_ep_s    clk_ep[3];
+  struct dev_clock_sink_ep_s    clk_ep[3]; /* USART / TIMER / PRS */
   struct dev_uart_config_s      cfg;
   uint32_t                      clkdiv;
   struct dev_freq_s             freq;
@@ -108,7 +147,7 @@ static void efm32_usart_char_cfg_apply(struct device_s *dev)
   struct efm32_usart_context_s	*pv = dev->drv_pv;
 
   pv->clkdiv = endian_le32(efm32_usart_char_bauds(dev));
-  cpu_mem_write_32(pv->addr + EFM32_USART_CLKDIV_ADDR, pv->clkdiv);
+  cpu_mem_write_32(pv->usart_addr + EFM32_USART_CLKDIV_ADDR, pv->clkdiv);
 
   uint32_t frame = 0;
 
@@ -140,356 +179,327 @@ static void efm32_usart_char_cfg_apply(struct device_s *dev)
       break;
     }
 
-  cpu_mem_write_32(pv->addr + EFM32_USART_FRAME_ADDR,
+  cpu_mem_write_32(pv->usart_addr + EFM32_USART_FRAME_ADDR,
                    endian_le32(frame));
+
+  /* XXX need to update timer delay as well */
 }
 
-static void efm32_usart_entry_low_power(struct device_s *dev)
+static void efm32_usart_start(struct device_s *dev, enum efm32_usart_start_e s)
 {
   struct efm32_usart_context_s	*pv = dev->drv_pv;
-
-  return;
-  
-   if (dev->start_count == 0 && pv->dma_started)
-     {
-       /* End DMA read operation */
-       ensure(DEVICE_OP(&pv->dma, cancel, &pv->dma_rd_rq) == 0);
-       pv->wptr = pv->rptr = pv->rx_buffer;
-       pv->dma_started = 0;
-     }
 
 #ifdef CONFIG_DEVICE_CLOCK_GATING
-   if (dev->start_count == 0)
-     dev_clock_sink_gate(&pv->clk_ep[0], DEV_CLOCK_EP_POWER);
+  if (!dev->start_count)
+    {
+      dev_clock_sink_gate(&pv->clk_ep[0], DEV_CLOCK_EP_POWER_CLOCK);
+      dev_clock_sink_gate(&pv->clk_ep[1], DEV_CLOCK_EP_POWER_CLOCK);
+      dev_clock_sink_gate(&pv->clk_ep[2], DEV_CLOCK_EP_POWER_CLOCK);
+    }
 #endif
 
+  if (pv->rx_state == EFM32_USART_RX_STOPPED &&
+      (pv->enabled & EFM32_USART_STARTED_READ) &&
+      s != EFM32_USART_STARTED_WRITE)
+    {
+      cpu_mem_write_32(pv->usart_addr + EFM32_USART_CMD_ADDR, EFM32_USART_CMD_RXEN);
+
+      /* Start DMA read */
+      pv->rx_state = EFM32_USART_RX_DESC_1;
+      pv->rx_overflow = 0;
+      pv->rx_rptr = 0;
+      pv->rx_size = 0;
+
+      DEVICE_OP(&pv->dma, request, &pv->dma_rd_rq, NULL);
+    }
+
+  dev->start_count |= s;
 }
 
-static void efm32_usart_try_write(struct device_s *dev)
+static void efm32_usart_stop(struct device_s *dev)
 {
   struct efm32_usart_context_s	*pv = dev->drv_pv;
-  struct dev_char_rq_s		*rq;
-  bool_t done = 0;
 
-#ifdef CONFIG_DEVICE_CLOCK_VARFREQ
-  if (pv->clkdiv)
-    {
-      cpu_mem_write_32(pv->addr + EFM32_USART_CLKDIV_ADDR, pv->clkdiv);
-      pv->clkdiv = 0;
-    }
-#endif
-
-  cpu_mem_write_32(pv->addr + EFM32_USART_IFC_ADDR,
-                   endian_le32(EFM32_USART_IFC_TXC));
-  cpu_mem_write_32(pv->addr + EFM32_USART_IEN_ADDR, EFM32_USART_IEN_TXC);
-
-  while ((rq = dev_char_rq_head(&pv->write_q)))
-    {
-      size_t size = 0;
-
-      if (size < rq->size && (cpu_mem_read_32(pv->addr + EFM32_USART_STATUS_ADDR)
-                & endian_le32(EFM32_USART_STATUS_TXBL)))
-        {
-          cpu_mem_write_32(pv->addr + EFM32_USART_TXDATAX_ADDR,
-                           endian_le32(rq->data[size++]));
-          done = 1;
-        }
-
-      if (size)
-        {
-          rq->size -= size;
-          rq->data += size;
-          rq->error = 0;
-
-          if ((rq->type & _DEV_CHAR_PARTIAL) || rq->size == 0)
-            {
-              dev_char_rq_pop(&pv->write_q);
-              dev_char_rq_done(rq);
-              continue;
-            }
-        }
-      /* more fifo space will be available on next interrupt */
-      return;
-    }
-
-  if (!done)
-    dev->start_count &= ~EFM32_USART_STARTED_WRITE;
-}
-
-static void efm32_usart_check_dma_ovf(struct efm32_usart_context_s *pv)
-{
-  if (pv->err)
+  if (dev->start_count)
     return;
 
-  pv->err = pv->pid ? (pv->wptr > pv->rptr) : (pv->rptr > pv->wptr);
-}
-
-static void efm32_usart_end_rq(struct efm32_usart_context_s *pv,
-                               struct dev_char_rq_s *rq,
-                               error_t err)
-{
-  rq->error = err;
-  dev_char_rq_pop(&pv->read_q);
-  dev_char_rq_done(rq);
-}
-
-static void efm32_usart_update_read_rq(struct efm32_usart_context_s *pv, size_t size)
-{
-  struct dev_char_rq_s *rq = dev_char_rq_head(&pv->read_q);
-
-  assert(rq);
-
-  memcpy(rq->data, (uint8_t *)pv->rptr, size);
-
-  LOCK_SPIN_IRQ(&pv->usart->lock);
-
-  rq->size -= size;
-  rq->data += size;
-  pv->rptr += size;
-
-  uint8_t * top = pv->rx_buffer + CONFIG_DRIVER_EFM32_USART_CHAR_DMA_FIFO_SIZE;
-
-  if (pv->rptr == top)
-  /* Reset read pointer */
+  if (pv->rx_state != EFM32_USART_RX_STOPPED)
     {
-      pv->pid ^= 1;
-      pv->rptr = pv->rx_buffer;
+      cpu_mem_write_32(pv->usart_addr + EFM32_USART_CMD_ADDR, EFM32_USART_CMD_RXDIS);
+      ensure(DEVICE_OP(&pv->dma, cancel, &pv->dma_rd_rq) == 0);
+      pv->rx_state = EFM32_USART_RX_STOPPED;
     }
 
-  if (rq->size == 0 || (rq->type & _DEV_CHAR_PARTIAL))
-  /* Request is terminated */
-    efm32_usart_end_rq(pv, rq, 0);
+  dev_clock_sink_gate(&pv->clk_ep[0], DEV_CLOCK_EP_POWER);
+  dev_clock_sink_gate(&pv->clk_ep[1], DEV_CLOCK_EP_POWER);
 
-  LOCK_RELEASE_IRQ(&pv->usart->lock);
+  /* XXX need refcount on clock ep because PRS may be shared between
+     multiple drivers */
+  dev_clock_sink_gate(&pv->clk_ep[2], DEV_CLOCK_EP_POWER);
 }
 
-static size_t efm32_usart_get_read_size(struct efm32_usart_context_s *pv)
+static void efm32_usart_try_stop(struct device_s *dev, enum efm32_usart_start_e s)
 {
-  size_t size;
+  if (dev->start_count &= ~s)
+    return;
 
-  LOCK_SPIN_IRQ(&pv->usart->lock);
+  device_sleep_schedule(dev);
+}
 
-  uint8_t * top = pv->rx_buffer + CONFIG_DRIVER_EFM32_USART_CHAR_DMA_FIFO_SIZE;
+/*********************************************************************** rx */
 
-  while(1)
+static DEV_DMA_CALLBACK(efm32_usart_dma_read_done)
+{
+  bool_t wakeup;
+  assert(err == 0);
+
+  struct efm32_usart_context_s *pv =
+    efm32_usart_context_s_from_dma_rd_rq(rq);
+
+  LOCK_SPIN_IRQ(&pv->dev->lock);
+
+  wakeup = !dev_rq_queue_isempty(&pv->read_q);
+
+  /* there are 2 cases of rx overflow that we can detect:
+     - the DMA has completed a descriptor but there is still unconsumed
+       data in the other buffer half (the rx ptr is located in the other half).
+     - the DMA reports completion of the same descriptor twice
+  */
+
+  const uint_fast16_t h = sizeof(pv->rx_buffer) / 2;
+
+  if ((desc_id ^ (pv->rx_rptr >= h)) ||
+      (desc_id == pv->rx_state))
     {
-      struct dev_char_rq_s *rq = dev_char_rq_head(&pv->read_q);
-
-      size = 0;
-
-      if (rq == NULL)
-        {
-          pv->usart->start_count &= ~EFM32_USART_STARTED_READ;
-          cpu_mem_write_32(pv->addr + EFM32_USART_CMD_ADDR, EFM32_USART_CMD_RXDIS);
-          goto end;
-        }
-
-      uint8_t *wptr = pv->wptr;
-
-      if (pv->err)
-      /* An overflow has occurred */
-        {
-          pv->err = 0;
-          pv->pid = 0;
-          pv->rptr = wptr;
-          efm32_usart_end_rq(pv, rq, -EPIPE);
-          continue;
-        }
-
-      size = wptr - pv->rptr + pv->pid * CONFIG_DRIVER_EFM32_USART_CHAR_DMA_FIFO_SIZE;
-
-      if (size == 0)
-      /* Fifo is empty */
-        goto end;
-
-      if (pv->pid)
-      /* Write pointer has wrapped */
-        size = top - pv->rptr;
-
-      if (size > rq->size)
-        size = rq->size;
-
-      break;
+      /* discard data in the other half */
+      pv->rx_overflow = 1;
+      pv->rx_rptr = desc_id * h;
+      pv->rx_size = h;
+    }
+  else
+    {
+      /* this half is now full of data */
+      pv->rx_size = h - (pv->rx_rptr % h);
     }
 
-end:
+  pv->rx_state = desc_id;
 
-  efm32_usart_entry_low_power(pv->usart);
+  LOCK_RELEASE_IRQ(&pv->dev->lock);
 
-  LOCK_RELEASE_IRQ(&pv->usart->lock);
-  return size;
+  if (wakeup)
+    kroutine_exec(&pv->read_kr);
+
+  return 1;
+}
+
+static uint_fast16_t
+efm32_usart_dma_update_rx_size(struct efm32_usart_context_s *pv)
+{
+  if (pv->rx_state == EFM32_USART_RX_STOPPED)
+    return 0;
+
+  /* Get DMA status */
+  struct dev_dma_status_s status;
+  DEVICE_OP(&pv->dma, get_status, &pv->dma_rd_rq, &status);
+
+  /* current DMA write pointer */
+  uint_fast16_t p = status.dst_addr - (uintptr_t)pv->rx_buffer;
+
+  uint_fast16_t r = (uint_fast16_t)(p - pv->rx_rptr) % sizeof(pv->rx_buffer);
+  pv->rx_size = r;
+
+  return r;
+}
+
+static DEV_IRQ_SRC_PROCESS(efm32_usart_timer_irq)
+{
+  struct device_s *dev = ep->base.dev;
+  struct efm32_usart_context_s	*pv = dev->drv_pv;
+
+  bool_t wakeup;
+
+  lock_spin(&dev->lock);
+
+  wakeup = !dev_rq_queue_isempty(&pv->read_q);
+
+  if (wakeup && !pv->rx_overflow)
+    {
+      uint_fast16_t r = efm32_usart_dma_update_rx_size(pv);
+      if (!r)
+        wakeup = 0;
+    }
+
+  uint32_t ir = endian_le32(cpu_mem_read_32(pv->timer_addr + EFM32_TIMER_IF_ADDR));
+  cpu_mem_write_32(pv->timer_addr + EFM32_TIMER_IFC_ADDR, ir);
+
+  lock_release(&dev->lock);
+
+  if (wakeup)
+    kroutine_exec(&pv->read_kr);
 }
 
 static KROUTINE_EXEC(efm32_usart_dma_try_read)
 {
   struct efm32_usart_context_s *pv = efm32_usart_context_s_from_read_kr(kr);
 
-  while(1)
+  while (1)
     {
-      size_t size = efm32_usart_get_read_size(pv);
+      struct dev_char_rq_s *rq = dev_char_rq_head(&pv->read_q);
+      uint_fast16_t p;
+      size_t r;
+      bool_t o;
 
-      if (size == 0)
-        break;
+      if (!rq)
+        {
+          efm32_usart_try_stop(pv->dev, EFM32_USART_STARTED_READ);
+          break;
+        }
 
-      efm32_usart_update_read_rq(pv, size);
+      /* snapshot fifo state */
+    retry:
+      LOCK_SPIN_IRQ(&pv->dev->lock);
+      r = pv->rx_size;
+      p = pv->rx_rptr;
+      o = pv->rx_overflow;
+      pv->rx_overflow = 0;
+
+      /* we do not want to wait for the next timer/dma irq to learn
+         about the actual amount of data that has been rx. */
+      if (!r && !o)
+        r = efm32_usart_dma_update_rx_size(pv);
+
+      LOCK_RELEASE_IRQ(&pv->dev->lock);
+
+      if (o)
+         {
+          rq->error = -EPIPE;
+          goto overflow;
+        }
+
+      /* amount of data that can be copied */
+      size_t s = __MIN(rq->size, r);
+
+      if (s && rq->type != DEV_CHAR_READ_POLL)
+        {
+          /* amount of data available before wrap */
+          size_t w = sizeof(pv->rx_buffer) - p;
+
+          if (rq->type != DEV_CHAR_DISCARD)
+            {
+              if (s > w)
+                {
+                  memcpy(rq->data, pv->rx_buffer + p, w);
+                  memcpy(rq->data + w, pv->rx_buffer, s - w);
+                }
+              else
+                {
+                  memcpy(rq->data, pv->rx_buffer + p, s);
+                }
+            }
+
+          /* update fifo state */
+          LOCK_SPIN_IRQ(&pv->dev->lock);
+          o = pv->rx_overflow;
+          pv->rx_overflow = 0;
+          if (!o)
+            {
+              pv->rx_rptr = (p + s) % sizeof(pv->rx_buffer);
+              pv->rx_size -= s;
+            }
+          LOCK_RELEASE_IRQ(&pv->dev->lock);
+
+          if (o)
+            {
+              rq->error = -EPIPE;
+              goto overflow;
+            }
+
+          rq->data += s;
+          rq->size -= s;
+        }
+
+      switch (rq->type)
+        {
+        case DEV_CHAR_READ:
+        case DEV_CHAR_DISCARD:
+          if (rq->size == 0)
+            break;
+          if (!r)
+            return;
+         goto retry;
+
+        case DEV_CHAR_READ_POLL:
+        case DEV_CHAR_READ_PARTIAL:
+          if (!r)
+            return;
+          break;
+
+        case DEV_CHAR_READ_NONBLOCK:
+          break;
+
+        default:
+          UNREACHABLE();
+        }
+
+      rq->error = 0;
+    overflow:
+      dev_char_rq_pop(&pv->read_q);
+      dev_char_rq_done(rq);
     }
 }
 
-static DEV_DMA_CALLBACK(efm32_usart_dma_read_done)
+/*********************************************************************** tx */
+
+static void efm32_usart_start_tx(struct device_s *dev,
+                                 struct dev_char_rq_s *rq)
 {
-  assert(err == 0);
-
-  struct efm32_usart_context_s *pv =
-    efm32_usart_context_s_from_dma_rd_rq(rq);
-
-  lock_spin(&pv->usart->lock);
-
-  pv->wptr = pv->rx_buffer + ((desc_id ^ 1) * (CONFIG_DRIVER_EFM32_USART_CHAR_DMA_FIFO_SIZE/2));
-
-  if (desc_id)
-    pv->pid ^= 1;
-
-  efm32_usart_check_dma_ovf(pv);
-
-  kroutine_exec(&pv->read_kr);
-
-  lock_release(&pv->usart->lock);
-
-  return 1;
-}
-
-static void efm32_usart_start_tx(struct device_s *dev);
-
-static KROUTINE_EXEC(efm32_usart_dma_process_next_write)
-{
-  struct efm32_usart_context_s *pv = efm32_usart_context_s_from_write_kr(kr);
-
-  LOCK_SPIN_IRQ(&pv->usart->lock);
-
-  struct dev_char_rq_s *rq = dev_char_rq_head(&pv->write_q);
-
-  assert(rq);
-
-  dev_char_rq_pop(&pv->write_q);
-  dev_char_rq_done(rq);
-
-  /* Process next request */
-  efm32_usart_start_tx(pv->usart);
-
-  efm32_usart_entry_low_power(pv->usart);
-
-  LOCK_RELEASE_IRQ(&pv->usart->lock);
-}
-
-static void efm32_usart_tx_dma_end(struct efm32_usart_context_s *pv, error_t err)
-{
-  struct dev_char_rq_s *crq = dev_char_rq_head(&pv->write_q);
-
-  crq->data += crq->size;
-  crq->size = 0;
-  crq->error = err;
-
-  /* We can not restart DMA core in DMA callback */
-  kroutine_exec(&pv->write_kr);
-}
-
-static void efm32_usart_usart_start_tx_dma(struct efm32_usart_context_s *pv)
-{
-  struct dev_char_rq_s *rq = dev_char_rq_head(&pv->write_q);
-  struct dev_dma_desc_s * desc = &pv->dma_wr_desc;
+  struct efm32_usart_context_s *pv = dev->drv_pv;
+  struct dev_dma_desc_s *desc = &pv->dma_wr_desc;
 
   /* TX */
   desc->src.mem.addr = (uintptr_t)rq->data;
   desc->src.mem.size = rq->size - 1;
 
   /* Start DMA request */
-  if (DEVICE_OP(&pv->dma, request, &pv->dma_wr_rq, NULL))
-    efm32_usart_tx_dma_end(pv, -EIO);
+  ensure(DEVICE_OP(&pv->dma, request, &pv->dma_wr_rq, NULL) == 0);
 }
 
+static KROUTINE_EXEC(efm32_usart_dma_process_next_write)
+{
+  struct efm32_usart_context_s *pv = efm32_usart_context_s_from_write_kr(kr);
+
+  struct dev_char_rq_s *rq = dev_char_rq_head(&pv->write_q);
+  assert(rq);
+
+  efm32_usart_start_tx(pv->dev, rq);
+}
 
 static DEV_DMA_CALLBACK(efm32_usart_dma_write_done)
 {
   struct efm32_usart_context_s *pv =
     efm32_usart_context_s_from_dma_wr_rq(rq);
 
-  lock_spin(&pv->usart->lock);
+  lock_spin(&pv->dev->lock);
 
-  efm32_usart_tx_dma_end(pv, 0);
+  struct dev_char_rq_s *crq = dev_char_rq_pop(&pv->write_q);
+  assert(crq);
 
-  lock_release(&pv->usart->lock);
+  crq->data += crq->size;
+  crq->size = 0;
+  crq->error = 0;
+  dev_char_rq_done(crq);
 
-  return 0;
+  if (!dev_rq_queue_isempty(&pv->write_q))
+    kroutine_exec(&pv->write_kr);
+  else
+    efm32_usart_try_stop(pv->dev, EFM32_USART_STARTED_WRITE);
+
+  lock_release(&pv->dev->lock);
+
+  return 0;    /* XXX could we let the DMA run intead of restarting? */
 }
 
-static void efm32_usart_dma_timeout_irq(struct efm32_usart_context_s *pv)
-{
-  assert(pv->timer_addr);
-
-  uint32_t ir = endian_le32(cpu_mem_read_32(pv->timer_addr + EFM32_TIMER_IF_ADDR));
-
-  cpu_mem_write_32(pv->timer_addr + EFM32_TIMER_IFC_ADDR, ir);
-
-  if (!pv->dma_started)
-    return;
-
-  struct dev_dma_status_s status;
-  /* Get DMA status */
-  DEVICE_OP(&pv->dma, get_status, &pv->dma_rd_rq, &status);
-  /* Update write pointer with DMA status */
-  pv->wptr = (uint8_t*)status.dst_addr;
-  /* Check Overflow */
-  efm32_usart_check_dma_ovf(pv);
-
-  kroutine_exec(&pv->read_kr);
-}
-
-static void efm32_usart_start_tx(struct device_s *dev)
-{
-  struct efm32_usart_context_s	*pv = dev->drv_pv;
-  struct dev_char_rq_s *rq = dev_char_rq_head(&pv->write_q);
-
-  if (rq == NULL)
-  /* Write queue is empty */
-    {
-      dev->start_count &= ~EFM32_USART_STARTED_WRITE;
-      return;
-    }
-
-  if (rq->type == DEV_CHAR_WRITE)
-    {
-      /* interrupt disabled */
-      uint32_t i = cpu_mem_read_32(pv->addr + EFM32_USART_IEN_ADDR);
-      i &= ~EFM32_USART_IEN_TXC;
-      cpu_mem_write_32(pv->addr + EFM32_USART_IEN_ADDR, endian_le32(i));
-
-      efm32_usart_usart_start_tx_dma(pv);
-      return;
-    }
-
-  efm32_usart_try_write(dev);
-}
-
-static void efm32_usart_start_rx(struct device_s *dev)
-{
-  struct efm32_usart_context_s	*pv = dev->drv_pv;
-
-  dev->start_count |= EFM32_USART_STARTED_READ;
-#ifdef CONFIG_DEVICE_CLOCK_GATING
-   dev_clock_sink_gate(&pv->clk_ep[0], DEV_CLOCK_EP_POWER_CLOCK);
-#endif
-  cpu_mem_write_32(pv->addr + EFM32_USART_CMD_ADDR, EFM32_USART_CMD_RXEN);
-
-  if (!pv->dma_started)
-  /* Start DMA read */
-    {
-      DEVICE_OP(&pv->dma, request, &pv->dma_rd_rq, NULL);
-      pv->dma_started = 1;
-    }
-
-  kroutine_exec(&pv->read_kr);
-  return;
-}
+/************************************************************************/
 
 #define efm32_usart_cancel (dev_char_cancel_t*)&dev_driver_notsup_fcn
 
@@ -499,46 +509,49 @@ static DEV_CHAR_REQUEST(efm32_usart_request)
   struct efm32_usart_context_s	*pv = dev->drv_pv;
   error_t err = 0;
 
-  assert(rq->size);
-
-
-  LOCK_SPIN_IRQ(&dev->lock);
-
   switch (rq->type)
     {
+    case DEV_CHAR_READ_POLL:
+      if (rq->size != 1)
+        goto not_sup;
     case DEV_CHAR_READ:
+    case DEV_CHAR_DISCARD:
+    case DEV_CHAR_READ_NONBLOCK:
     case DEV_CHAR_READ_PARTIAL: {
+      if (!(pv->enabled & EFM32_USART_STARTED_READ))
+        goto not_sup;
+      bool_t empty = dev_rq_queue_isempty(&pv->read_q);
       dev_char_rq_pushback(&pv->read_q, rq);
-      efm32_usart_start_rx(dev);
+      if (empty)
+        {
+          efm32_usart_start(dev, EFM32_USART_STARTED_READ);
+          kroutine_exec(&pv->read_kr);
+        }
       break;
     }
+
     case DEV_CHAR_WRITE_PARTIAL_FLUSH:
     case DEV_CHAR_WRITE_FLUSH:
     case DEV_CHAR_WRITE_PARTIAL:
     case DEV_CHAR_WRITE: {
+      if (!(pv->enabled & EFM32_USART_STARTED_WRITE))
+        goto not_sup;
       bool_t empty = dev_rq_queue_isempty(&pv->write_q);
       dev_char_rq_pushback(&pv->write_q, rq);
       dev->start_count |= EFM32_USART_STARTED_WRITE;
-#ifdef CONFIG_DEVICE_CLOCK_GATING
-      dev_clock_sink_gate(&pv->clk_ep[0], DEV_CLOCK_EP_POWER_CLOCK);
-#endif
       if (empty)
-        efm32_usart_start_tx(dev);
+        {
+          efm32_usart_start(dev, EFM32_USART_STARTED_WRITE);
+          efm32_usart_start_tx(dev, rq);
+        }
       break;
     }
+
     default:
-      err = -ENOTSUP;
-      break;
-    }
-
-  efm32_usart_entry_low_power(dev);
-
-  LOCK_RELEASE_IRQ(&dev->lock);
-
-  if (err)
-    {
-      rq->error = err;
+    not_sup:
+      rq->error = -ENOTSUP;
       dev_char_rq_done(rq);
+      break;
     }
 }
 
@@ -583,41 +596,6 @@ static DEV_VALIO_REQUEST(efm32_usart_valio_request)
 #define efm32_usart_valio_cancel (dev_valio_cancel_t*)dev_driver_notsup_fcn
 #endif
 
-
-static DEV_IRQ_SRC_PROCESS(efm32_usart_irq)
-{
-  struct device_s *dev = ep->base.dev;
-  struct efm32_usart_context_s	*pv = dev->drv_pv;
-
-  lock_spin(&dev->lock);
-
-  uint32_t ir;
-
-  switch (ep - pv->irq_ep)
-    {
-      case 0:
-        while (1)
-          {
-            ir = endian_le32(cpu_mem_read_32(pv->addr + EFM32_USART_IF_ADDR));
-
-            if (!(ir & (EFM32_USART_IF_TXC)))
-              break;
-
-            if (ir & EFM32_USART_IF_TXC)
-              efm32_usart_try_write(dev);
-          }
-        break;
-      case 1:
-        efm32_usart_dma_timeout_irq(pv);
-        break;
-      default:
-        break;
-  }
-
-  efm32_usart_entry_low_power(dev);
-  lock_release(&dev->lock);
-}
-
 static DEV_USE(efm32_usart_char_use)
 {
   switch (op)
@@ -634,75 +612,76 @@ static DEV_USE(efm32_usart_char_use)
     }
 #endif
 
-#ifdef CONFIG_DEVICE_CLOCK_GATING
+    case DEV_USE_SLEEP: {
+      struct device_accessor_s *acc = param;
+      struct device_s *dev = acc->dev;
+      efm32_usart_stop(dev);
+      return 0;
+    }
+
     case DEV_USE_START: {
       struct device_accessor_s *acc = param;
       struct device_s *dev = acc->dev;
-      struct efm32_usart_context_s *pv = dev->drv_pv;
-      if (dev->start_count == 0)
-        dev_clock_sink_gate(&pv->clk_ep[0], DEV_CLOCK_EP_POWER_CLOCK);
+      efm32_usart_start(dev, 0);
       return 0;
     }
 
     case DEV_USE_STOP: {
       struct device_accessor_s *acc = param;
       struct device_s *dev = acc->dev;
-      efm32_usart_entry_low_power(dev);
+      efm32_usart_try_stop(dev, 0);
       return 0;
     }
-#endif
 
     default:
       return dev_use_generic(param, op);
     }
 }
 
-#define PRS_CHANNEL 1
-#define CC_CHANNEL 0
-
-static error_t efm32_usart_timeout_init(struct efm32_usart_context_s *pv,
-                                        uint32_t pin)
+static error_t efm32_usart_timer_init(struct efm32_usart_context_s *pv)
 {
-  uint32_t x;
-
-  /* Prs init */
-
-  bool_t low = (pin % 16) < 8;
-
-  uintptr_t offset = low ? EFM32_GPIO_EXTIPSELL_ADDR : EFM32_GPIO_EXTIPSELH_ADDR;
-
-  x = endian_le32(cpu_mem_read_32(EFM32_GPIO_ADDR + offset));
-  EFM32_GPIO_EXTIPSELH_EXT_SETVAL(pin % 8, x, pin /16);
-  cpu_mem_write_32(EFM32_GPIO_ADDR + offset, endian_le32(x));
-
-#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
-  x = low ? EFR32_PRS_CH_CTRL_SOURCESEL(GPIOL) : EFR32_PRS_CH_CTRL_SOURCESEL(GPIOH);
-  x |= EFR32_PRS_CH_CTRL_EDSEL(OFF);
-  EFR32_PRS_CH_CTRL_SIGSEL_SETVAL(x, pin % 8);
-  cpu_mem_write_32(EFM32_PRS_ADDR + EFR32_PRS_CH_CTRL_ADDR(PRS_CHANNEL), endian_le32(x));
-#elif EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 0
-  x = low ? EFM32_PRS_CTRL_SOURCESEL(GPIOL) : EFM32_PRS_CTRL_SOURCESEL(GPIOH);
-  x |= EFM32_PRS_CTRL_EDSEL(OFF);
-  EFM32_PRS_CTRL_SIGSEL_SET(x, pin % 8);
-  cpu_mem_write_32(EFM32_PRS_ADDR + EFM32_PRS_CTRL_ADDR(PRS_CHANNEL), endian_le32(x));
-#endif
-
-  uintptr_t addr = pv->timer_addr;
+  uintptr_t taddr = pv->timer_addr;
 
   /* Stop timer and clear irq */
-  cpu_mem_write_32(addr + EFM32_TIMER_CMD_ADDR, endian_le32(EFM32_TIMER_CMD_STOP));
-  cpu_mem_write_32(addr + EFM32_TIMER_IEN_ADDR, 0);
-  cpu_mem_write_32(addr + EFM32_TIMER_IFC_ADDR, endian_le32(EFM32_TIMER_IFC_MASK));
+  cpu_mem_write_32(taddr + EFM32_TIMER_CMD_ADDR, endian_le32(EFM32_TIMER_CMD_STOP));
+  cpu_mem_write_32(taddr + EFM32_TIMER_IEN_ADDR, 0);
+  cpu_mem_write_32(taddr + EFM32_TIMER_IFC_ADDR, endian_le32(EFM32_TIMER_IFC_MASK));
 
-  /* Select HFPERCLK as source */
+  /* Prs init */
+#if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
+  #error New code that uses directly UART1RXV as PRS input isn t implemented
+#elif EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 0
+  uint32_t x = 0;
+
+  switch (pv->usart_addr)
+    {
+    case 0x4000c000:
+      EFM32_PRS_CTRL_SOURCESEL_SET(x, USART0);
+      break;
+
+    case 0x4000c400:
+      EFM32_PRS_CTRL_SOURCESEL_SET(x, USART1);
+      break;
+
+    case 0x4000c800:
+      EFM32_PRS_CTRL_SOURCESEL_SET(x, USART2);
+      break;
+
+    default:
+      return -EINVAL;
+    }
+
+  EFM32_PRS_CTRL_SIGSEL_SET(x, 2 /* SIGSEL = USARTxRXDATAV */);
+  cpu_mem_write_32(EFM32_PRS_ADDR + EFM32_PRS_CTRL_ADDR(CONFIG_DRIVER_EFM32_USART_CHAR_DMA_PRS_CHANNEL), endian_le32(x));
+#endif
+
+  /* Select HFPERCLK as timer source */
   x = EFM32_TIMER_CTRL_MODE(UP) |
       EFM32_TIMER_CTRL_OSMEN |
       EFM32_TIMER_CTRL_CLKSEL(PRESCHFPERCLK) |
       EFM32_TIMER_CTRL_RISEA(RELOADSTART) ;
 
-  cpu_mem_write_32(addr + EFM32_TIMER_CTRL_ADDR, endian_le32(x));
-
-  /* CC0 configuration */
+  cpu_mem_write_32(taddr + EFM32_TIMER_CTRL_ADDR, endian_le32(x));
 
   /* Set input PRS channel as timer control */
   x = EFM32_TIMER_CC_CTRL_MODE(OFF) |
@@ -712,43 +691,41 @@ static error_t efm32_usart_timeout_init(struct efm32_usart_context_s *pv,
 #elif EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 0
       EFM32_TIMER_CC_CTRL_INSEL(PRS);
 #endif
-  EFM32_TIMER_CC_CTRL_PRSSEL_SETVAL(x, PRS_CHANNEL);
+  EFM32_TIMER_CC_CTRL_PRSSEL_SETVAL(x, CONFIG_DRIVER_EFM32_USART_CHAR_DMA_PRS_CHANNEL);
 
-  cpu_mem_write_32(addr + EFM32_TIMER_CC_CTRL_ADDR(CC_CHANNEL), endian_le32(x));
+  cpu_mem_write_32(taddr + EFM32_TIMER_CC_CTRL_ADDR(0), endian_le32(x));
 
   struct dev_freq_s freq = {
-      .num   = pv->cfg.baudrate,
-      .denom = CONFIG_DRIVER_EFM32_USART_CHAR_DMA_TIMEOUT_SYMBOL,
-    };
+    .num   = pv->cfg.baudrate,
+    .denom = CONFIG_DRIVER_EFM32_USART_CHAR_DMA_TIMEOUT_SYMBOL,
+  };
 
-  /* Compute scale factor to the requested frequency. */
+  /* Compute scale factor according to the requested frequency. */
   uint64_t scale = (pv->timer_freq.num * freq.denom) / (pv->timer_freq.denom * freq.num);
-
-  uint32_t msb = scale >> 16;
-
-  uint8_t div = msb ? bit_msb_index(msb) + 1 : 0;
-
-  if (div > 10)
-  /* Frequency can not be achieved */
+  uint_fast8_t div = bit_msb_index(scale);
+  if (!scale || div > 25)
     return -ERANGE;
 
-  scale = scale / (1 << div);
-
-  if ((scale - 1) >> 16)
-    return -ERANGE;
+  if (div > 15)
+    {
+      div -= 15;
+      scale >>= div;
+    }
 
   /* Top value */
-  cpu_mem_write_32(addr + EFM32_TIMER_TOP_ADDR, endian_le32(scale - 1));
+  cpu_mem_write_32(taddr + EFM32_TIMER_TOP_ADDR, endian_le32(scale - 1));
 
   /* Prescaler */
-  x = endian_le32(cpu_mem_read_32(addr + EFM32_TIMER_CTRL_ADDR));
+  x = endian_le32(cpu_mem_read_32(taddr + EFM32_TIMER_CTRL_ADDR));
   EFM32_TIMER_CTRL_PRESC_SETVAL(x, div);
-  cpu_mem_write_32(addr + EFM32_TIMER_CTRL_ADDR, endian_le32(x));
+  cpu_mem_write_32(taddr + EFM32_TIMER_CTRL_ADDR, endian_le32(x));
 
-  cpu_mem_write_32(addr + EFM32_TIMER_IEN_ADDR, EFM32_TIMER_IEN_OF);
+  cpu_mem_write_32(taddr + EFM32_TIMER_IEN_ADDR, EFM32_TIMER_IEN_OF);
 
   return 0;
 }
+
+#define logk_fatal logk
 
 static DEV_INIT(efm32_usart_char_init)
 {
@@ -763,9 +740,19 @@ static DEV_INIT(efm32_usart_char_init)
 
   memset(pv, 0, sizeof(*pv));
 
-  err = device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL);
+  uintptr_t uaddr;
+
+  err = device_res_get_uint(dev, DEV_RES_MEM, 0, &uaddr, NULL);
   if (err)
     goto err_mem;
+
+  err = device_res_get_uint(dev, DEV_RES_MEM, 1, &pv->timer_addr, NULL);
+  if (err) {
+    logk_fatal("No timer");
+    goto err_irq;
+  }
+
+  pv->usart_addr = uaddr;
 
   /* setup pinmux */
   iomux_io_id_t pin[2];
@@ -782,11 +769,13 @@ static DEV_INIT(efm32_usart_char_init)
 
   if (loc[0] != IOMUX_INVALID_DEMUX)
     {
+      pv->enabled |= EFM32_USART_STARTED_READ;
       enable |= EFM32_USART_ROUTEPEN_RXPEN;
       EFM32_USART_ROUTELOC0_RXLOC_SETVAL(route, loc[0]);
     }
   if (loc[1] != IOMUX_INVALID_DEMUX)
     {
+      pv->enabled |= EFM32_USART_STARTED_WRITE;
       enable |= EFM32_USART_ROUTEPEN_TXPEN;
       EFM32_USART_ROUTELOC0_TXLOC_SETVAL(route, loc[1]);
     }
@@ -799,9 +788,15 @@ static DEV_INIT(efm32_usart_char_init)
 #elif EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 0
   uint32_t route = 0;
   if (loc[0] != IOMUX_INVALID_DEMUX)
-    route |= EFM32_USART_ROUTE_RXPEN;
+    {
+      pv->enabled |= EFM32_USART_STARTED_READ;
+      route |= EFM32_USART_ROUTE_RXPEN;
+    }
   if (loc[1] != IOMUX_INVALID_DEMUX)
-    route |= EFM32_USART_ROUTE_TXPEN;
+    {
+      pv->enabled |= EFM32_USART_STARTED_WRITE;
+      route |= EFM32_USART_ROUTE_TXPEN;
+    }
 
   EFM32_USART_ROUTE_LOCATION_SETVAL(route, loc[0] != IOMUX_INVALID_DEMUX ? loc[0] : loc[1]);
 
@@ -826,41 +821,39 @@ static DEV_INIT(efm32_usart_char_init)
   }
 
   /* wait for current TX to complete */
-  if (cpu_mem_read_32(pv->addr + EFM32_USART_STATUS_ADDR)
+  if (cpu_mem_read_32(uaddr + EFM32_USART_STATUS_ADDR)
       & endian_le32(EFM32_USART_STATUS_TXENS))
-      while (!(cpu_mem_read_32(pv->addr + EFM32_USART_STATUS_ADDR)
+      while (!(cpu_mem_read_32(uaddr + EFM32_USART_STATUS_ADDR)
                & endian_le32(EFM32_USART_STATUS_TXBL)))
         ;
 
   /* disable and clear the uart */
-  cpu_mem_write_32(pv->addr + EFM32_USART_CMD_ADDR,
+  cpu_mem_write_32(uaddr + EFM32_USART_CMD_ADDR,
                    endian_le32(EFM32_USART_CMD_RXDIS | EFM32_USART_CMD_TXDIS));
 
-  cpu_mem_write_32(pv->addr + EFM32_USART_CMD_ADDR,
+  cpu_mem_write_32(uaddr + EFM32_USART_CMD_ADDR,
                    endian_le32(EFM32_USART_CMD_CLEARRX | EFM32_USART_CMD_CLEARTX));
 
 #if EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 1
-  cpu_mem_write_32(pv->addr + EFM32_USART_ROUTELOC0_ADDR, endian_le32(route));
-  cpu_mem_write_32(pv->addr + EFM32_USART_ROUTEPEN_ADDR, endian_le32(enable));
+  cpu_mem_write_32(uaddr + EFM32_USART_ROUTELOC0_ADDR, endian_le32(route));
+  cpu_mem_write_32(uaddr + EFM32_USART_ROUTEPEN_ADDR, endian_le32(enable));
 #elif EFM32_SERIES(CONFIG_EFM32_CFAMILY) == 0
-  cpu_mem_write_32(pv->addr + EFM32_USART_ROUTE_ADDR, endian_le32(route));
+  cpu_mem_write_32(uaddr + EFM32_USART_ROUTE_ADDR, endian_le32(route));
 #else
 # error
 #endif
 
-  /* enable irqs */
-  cpu_mem_write_32(pv->addr + EFM32_USART_IFC_ADDR, endian_le32(EFM32_USART_IFC_MASK));
-
   /* configure */
-  cpu_mem_write_32(pv->addr + EFM32_USART_CTRL_ADDR, endian_le32(EFM32_USART_CTRL_OVS(X4)));
+  cpu_mem_write_32(uaddr + EFM32_USART_CTRL_ADDR, endian_le32(EFM32_USART_CTRL_OVS(X4)));
 
   /* set config */
-  if (device_get_res_uart(dev, &pv->cfg)) {
-    pv->cfg.baudrate = CONFIG_DRIVER_EFM32_USART_RATE;
-    pv->cfg.data_bits = 8;
-    pv->cfg.parity = DEV_UART_PARITY_NONE;
-    pv->cfg.stop_bits = 1;
-  }
+  if (device_get_res_uart(dev, &pv->cfg))
+    {
+      pv->cfg.baudrate = CONFIG_DRIVER_EFM32_USART_RATE;
+      pv->cfg.data_bits = 8;
+      pv->cfg.parity = DEV_UART_PARITY_NONE;
+      pv->cfg.stop_bits = 1;
+    }
 
 #ifdef CONFIG_DEVICE_CLOCK_VARFREQ
   pv->clkdiv = 0;
@@ -868,42 +861,33 @@ static DEV_INIT(efm32_usart_char_init)
   efm32_usart_char_cfg_apply(dev);
 
   /* enable the uart */
-  cpu_mem_write_32(pv->addr + EFM32_USART_CMD_ADDR,
+  cpu_mem_write_32(uaddr + EFM32_USART_CMD_ADDR,
                    endian_le32(EFM32_USART_CMD_TXEN | EFM32_USART_CMD_RXBLOCKDIS));
-
-  err = device_res_get_uint(dev, DEV_RES_MEM, 1, &pv->timer_addr, NULL);
-  if (err) {
-    pv->timer_addr = 0;
-    logk_fatal("No timer");
-    goto err_irq;
-  }
 
   err = dev_drv_clock_init(dev, &pv->clk_ep[1], 1, DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_GATING_SYNC, &pv->timer_freq);
   if (err) {
-    logk_fatal("Unable to gate clock ep 1");
+    logk_fatal("Unable to gate clock for TIMER");
     goto err_irq;
   }
+
+  logk("num: %llu denom: %llu", pv->timer_freq.num, pv->timer_freq.denom);
 
   err = dev_drv_clock_init(dev, &pv->clk_ep[2], 2, DEV_CLOCK_EP_POWER_CLOCK | DEV_CLOCK_EP_GATING_SYNC, NULL);
   if (err) {
-    logk_fatal("Unable to gate clock ep 2");
+    logk_fatal("Unable to gate clock for PRS");
     goto err_irq;
   }
 
-  pv->wptr = pv->rptr = pv->rx_buffer;
-  pv->dma_started = 0;
-  pv->err = 0;
-
-  err = efm32_usart_timeout_init(pv, pin[0]);
+  err = efm32_usart_timer_init(pv);
   if (err) {
-    logk_fatal("Unable to setup timeout");
+    logk_fatal("Unable to setup timer");
     goto err_irq;
   }
 
   uint32_t read_link, write_link;
   uint32_t read_mask, write_mask;
 
-  pv->usart = dev;
+  pv->dev = dev;
 
   err = device_res_get_dma(dev, 0, &read_mask, &read_link);
   if (err) {
@@ -931,7 +915,7 @@ static DEV_INIT(efm32_usart_char_init)
   for (uint8_t i = 0; i < 2; i++)
     {
       desc = pv->dma_rd_desc + i;
-      desc->src.reg.addr = pv->addr + EFM32_USART_RXDATA_ADDR;
+      desc->src.reg.addr = uaddr + EFM32_USART_RXDATA_ADDR;
       desc->src.reg.width = 0;
       desc->src.reg.burst = 1;
       desc->dst.mem.inc = DEV_DMA_INC_1_UNITS;
@@ -952,7 +936,7 @@ static DEV_INIT(efm32_usart_char_init)
   rq = &pv->dma_wr_rq;
   desc = &pv->dma_wr_desc;
 
-  desc->dst.reg.addr = pv->addr + EFM32_USART_TXDATA_ADDR;
+  desc->dst.reg.addr = uaddr + EFM32_USART_TXDATA_ADDR;
   desc->dst.reg.burst = 1;
   desc->src.mem.inc = DEV_DMA_INC_1_UNITS;
   desc->src.mem.width = 0;
@@ -969,13 +953,15 @@ static DEV_INIT(efm32_usart_char_init)
   kroutine_init_deferred(&pv->write_kr, &efm32_usart_dma_process_next_write);
 
   /* init irq endpoints */
-  device_irq_source_init(dev, pv->irq_ep, 2, &efm32_usart_irq);
+  device_irq_source_init(dev, &pv->irq_ep, 1, &efm32_usart_timer_irq);
 
-  err = device_irq_source_link(dev, pv->irq_ep, 2, -1);
+  err = device_irq_source_link(dev, &pv->irq_ep, 1, -1);
   if (err) {
     logk_fatal("Unable to setup IRQ");
     goto err_fifo;
   }
+
+  pv->rx_state = EFM32_USART_RX_STOPPED;
 
 #ifdef CONFIG_DEVICE_CLOCK_GATING
   dev_clock_sink_gate(&pv->clk_ep[0], DEV_CLOCK_EP_POWER);
@@ -984,7 +970,7 @@ static DEV_INIT(efm32_usart_char_init)
   return 0;
 
  err_irq:
-  device_irq_source_unlink(dev, pv->irq_ep, 2);
+  device_irq_source_unlink(dev, &pv->irq_ep, 1);
  err_fifo:
   dev_rq_queue_destroy(&pv->read_q);
   dev_rq_queue_destroy(&pv->write_q);
@@ -997,17 +983,26 @@ static DEV_CLEANUP(efm32_usart_char_cleanup)
 {
   struct efm32_usart_context_s	*pv = dev->drv_pv;
 
-  /* disable irqs */
-  cpu_mem_write_32(pv->addr + EFM32_USART_IEN_ADDR, 0);
+  if (dev->start_count)
+    return -EBUSY;
 
-  device_irq_source_unlink(dev, pv->irq_ep, 2);
+  /* stop rx DMA */
+  if (pv->rx_state != EFM32_USART_RX_STOPPED)
+    ensure(DEVICE_OP(&pv->dma, cancel, &pv->dma_rd_rq) == 0);
 
-  /* disable the uart */
-  cpu_mem_write_32(pv->addr + EFM32_USART_CMD_ADDR,
+  /* disable the timer */
+  cpu_mem_write_32(pv->timer_addr + EFM32_TIMER_IEN_ADDR, 0);
+  cpu_mem_write_32(pv->timer_addr + EFM32_TIMER_CMD_ADDR, endian_le32(EFM32_TIMER_CMD_STOP));
+
+  /* disable the usart */
+  device_irq_source_unlink(dev, &pv->irq_ep, 1);
+
+  cpu_mem_write_32(pv->usart_addr + EFM32_USART_CMD_ADDR,
                    endian_le32(EFM32_USART_CMD_RXDIS | EFM32_USART_CMD_TXDIS));
 
   dev_drv_clock_cleanup(dev, &pv->clk_ep[0]);
   dev_drv_clock_cleanup(dev, &pv->clk_ep[1]);
+  dev_drv_clock_cleanup(dev, &pv->clk_ep[2]);
 
   dev_rq_queue_destroy(&pv->read_q);
   dev_rq_queue_destroy(&pv->write_q);
