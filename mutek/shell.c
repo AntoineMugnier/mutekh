@@ -162,15 +162,20 @@ static CONTEXT_ENTRY(shell_thread)
     ;
 }
 
-void mutek_shell_thread_init()
+void mutek_shell_thread_start(const struct device_char_s *acc)
 {
   static const struct thread_attr_s a = {
     .stack_size = CONFIG_MUTEK_SHELL_STACK_SIZE,
     .scope = mem_scope_sys,
   };
 
-  if (device_check_accessor(&console_dev.base))
-    thread_create(shell_thread, &console_dev, &a);
+  if (device_check_accessor(&acc->base))
+    thread_create(shell_thread, (void*)acc, &a);
+}
+
+void mutek_shell_thread_init()
+{
+  mutek_shell_thread_start(&console_dev);
 }
 
 #endif

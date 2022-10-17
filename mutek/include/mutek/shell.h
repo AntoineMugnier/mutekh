@@ -171,6 +171,9 @@ error_t mutek_shell_start(const struct device_char_s *c, const char *term,
                        const struct termui_con_entry_s * const *root,
                        const char *prompt);
 
+/** @This spawn an interactive shell thread. */
+void mutek_shell_thread_start(const struct device_char_s *acc);
+
 /** This is used to store a pointer to a shell buffer or other
     storage in a console options parsing context.
     @see #TERMUI_CON_OPT_SHELL_BUFFER_GET_ENTRY */
