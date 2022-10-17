@@ -211,13 +211,17 @@ inline uint32_t fnv1a_32_update(uint32_t f, uint8_t x)
   return f;
 }
 
-inline uint32_t fnv1a_32(const void *data, size_t len)
+inline uint32_t fnv1a_32_update_buf(uint32_t f, const void *data, size_t len)
 {
-  uint32_t f = FNV_32_INIT;
   const uint8_t *d = data;
   for (size_t i = 0; i < len; i++)
     f = fnv1a_32_update(f, d[i]);
   return f;
+}
+
+inline uint32_t fnv1a_32(const void *data, size_t len)
+{
+  return fnv1a_32_update_buf(FNV_32_INIT, data, len);
 }
 
 inline uint64_t fnv1a_64_update(uint64_t f, uint8_t x)
@@ -232,13 +236,17 @@ inline uint64_t fnv1a_64_update(uint64_t f, uint8_t x)
   return f;
 }
 
-inline uint64_t fnv1a_64(const void *data, size_t len)
+inline uint64_t fnv1a_64_update_buf(uint64_t f, const void *data, size_t len)
 {
-  uint64_t f = FNV_64_INIT;
   const uint8_t *d = data;
   for (size_t i = 0; i < len; i++)
     f = fnv1a_64_update(f, d[i]);
   return f;
+}
+
+inline uint64_t fnv1a_64(const void *data, size_t len)
+{
+  return fnv1a_64_update_buf(FNV_64_INIT, data, len);
 }
 
 C_HEADER_END
