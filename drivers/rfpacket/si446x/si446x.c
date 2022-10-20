@@ -319,7 +319,7 @@ si446x_modem_configure(struct si446x_ctx_s *pv,
         idx += (c->symbols == 4);
         break;
       }
-#ifdef CONFIG_DRIVER_RFPACKET_SI446X_MOD_00K
+#ifdef CONFIG_DRIVER_RFPACKET_SI446X_MOD_OOK
     case DEV_RFPACKET_ASK:
       {
         const struct dev_rfpacket_rf_cfg_ask_s * c =
