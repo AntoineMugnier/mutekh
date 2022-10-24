@@ -254,7 +254,7 @@ static void efm32_bitbang_ctx_start_tx(struct efm32_bitbang_ctx_s * __restrict__
   /* add some warm-up cycles so that the DMA is ready to feed
      samples. starting with short pulses is not handled properly when
      this is not done. */
-  cpu_mem_write_32(a + EFM32_TIMER_TOP_ADDR, 128);
+  cpu_mem_write_32(a + EFM32_TIMER_TOP_ADDR, CONFIG_DRIVER_EFM32_BITBANG_WARMUP);
 
   /* preload first sample so that we override the content of TOPB in
      case it was already marked as valid */
