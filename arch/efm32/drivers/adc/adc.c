@@ -103,15 +103,15 @@ struct efm32_adc_private_s
   /* Request queue */
   dev_request_queue_root_t   queue;
 
+  /* samples of current request */
+  int16_t                    *samples;
+
   /* Configuration array of channels */
   uintptr_t const *          config;
   uint16_t                   config_count;
 
   /* Pending channel */
-  uint16_t                    pending;
-
-  /* Index of the current channel */
-  uint8_t                    index;
+  uint16_t                   pending;
 };
 
 #if defined(CONFIG_DEVICE_CLOCK_VARFREQ)
@@ -130,14 +130,14 @@ void efm32_adc_clk_changed(struct efm32_adc_private_s * pv)
 static
 void efm32_adc_sample_next(struct efm32_adc_private_s * pv)
 {
-  pv->index = bit_ctz(pv->pending);
-  pv->pending &= ~bit(pv->index);
+  uint_fast8_t index = bit_ctz(pv->pending);
+  pv->pending &= ~bit(index);
 
-  uint32_t cfg = pv->config[pv->index];
+  uint32_t cfg = pv->config[index];
   cfg &= ~EFM32_ADC_SINGLECTRL_ADJ;
   cfg &= ~EFM32_ADC_SINGLECTRL_REP;
 
-  logk_debug("Index %d config %08x\n", pv->index, cfg);
+  logk_debug("Channel %d config %08x", index, cfg);
 
   cpu_mem_write_32(pv->addr + EFM32_ADC_SINGLECTRL_ADDR, endian_le32(cfg));
   cpu_mem_write_32(pv->addr + EFM32_ADC_IFC_ADDR, -1);
@@ -157,8 +157,8 @@ bool_t efm32_adc_request_next(struct efm32_adc_private_s * pv)
 
   group = rq->data;
 
+  pv->samples = group->value;
   pv->pending = group->mask & bit_mask(0, pv->config_count);
-  pv->index   = 0;
 
 #if defined(CONFIG_DEVICE_CLOCK_GATING)
   dev_clock_sink_gate(&pv->clk_ep, DEV_CLOCK_EP_POWER_CLOCK);
@@ -219,7 +219,6 @@ DEV_IRQ_SRC_PROCESS(efm32_adc_irq)
   struct efm32_adc_private_s * pv  = dev->drv_pv;
 
   struct dev_valio_rq_s *    rq;
-  struct valio_adc_group_s * group;
 
   uint32_t x;
 
@@ -229,8 +228,6 @@ DEV_IRQ_SRC_PROCESS(efm32_adc_irq)
   if (!rq)
     goto stop;
 
-  group = rq->data;
-
   x = endian_le32(cpu_mem_read_32(pv->addr + EFM32_ADC_IF_ADDR));
   if (!x)
     goto end;
@@ -239,10 +236,11 @@ DEV_IRQ_SRC_PROCESS(efm32_adc_irq)
 
   if (x & EFM32_ADC_IF_SINGLE)
     {
-      group->value[pv->index] =
-        endian_le32(cpu_mem_read_32(pv->addr + EFM32_ADC_SINGLEDATA_ADDR));
+      uint16_t s = cpu_mem_read_32(pv->addr + EFM32_ADC_SINGLEDATA_ADDR);
 
-      logk_debug("Index %d Value 0x%04x\n", pv->index, group->value[pv->index]);
+      *pv->samples++ = s;
+
+      logk_debug("Value 0x%04x", s);
 
       cpu_mem_write_32(pv->addr + EFM32_ADC_CMD_ADDR,
                        endian_le32(EFM32_ADC_CMD_SINGLESTOP));
