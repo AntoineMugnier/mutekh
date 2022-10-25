@@ -336,9 +336,10 @@ DEV_INIT(efm32_adc_init)
   uint_fast8_t const div      = 1 << log2_div;
   uint64_t     const timebase = ((uint64_t)pv->freq.num / pv->freq.denom / 1000000) >> log2_div;
 
-  uint32_t x = 0;
+  uint32_t x = CONFIG_DRIVER_EFM32_ADC_CTRL;
   EFM32_ADC_CTRL_TIMEBASE_SET(x, timebase);
   EFM32_ADC_CTRL_PRESC_SET(x, div - 1);
+  EFM32_ADC_CTRL_OVRSEL_SET(x, X4096);
   cpu_mem_write_32(pv->addr + EFM32_ADC_CTRL_ADDR, endian_le32(x));
   cpu_mem_write_32(pv->addr + EFM32_ADC_CMD_ADDR, endian_le32(EFM32_ADC_CMD_SINGLESTOP));
 
