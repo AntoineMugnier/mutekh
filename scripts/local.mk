@@ -78,6 +78,14 @@ $(3)/$(1): $(2)/$(1)
 endef
 
 
+define declare_external_hg
+
+$(info Updating external repository $(3) ...)
+$(shell cd $(4) ; test -d $(1)_$(2) || hg clone $(3) $(1)_$(2) -u $(2))
+$(shell cd $(4) ; ln -sf $(1)_$(2) $(1))
+
+endef
+
 
 ## declare_obj: file_name, src_dir, obj_dir
 
@@ -269,6 +277,7 @@ copy-defined:=
 subdirs-defined:=
 pre_headers-defined:=
 enum_headers-defined:=
+ext_hg:=
 
 include $$(LOCAL_SRC_DIR)/Makefile
 
@@ -285,6 +294,8 @@ PRE_HEADER_LIST+=$$(filter %.h,$$(COPY_OBJECT_LIST))
 
 $$(LOCAL_OBJ_DIR):
 	mkdir -p $$@
+
+$$(eval $$(if $$(ext_hg),$$(call declare_external_hg,$$(word 1, $$(ext_hg)),$$(word 2, $$(ext_hg)),$$(wordlist 3,99,$$(ext_hg)),$$(LOCAL_SRC_DIR),$$(LOCAL_OBJ_DIR))))
 
 $$(eval $$(foreach obj,$$(objs) $$(objs-defined),$$(call declare_obj,$$(obj),$$(LOCAL_SRC_DIR),$$(LOCAL_OBJ_DIR))))
 

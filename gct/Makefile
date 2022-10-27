@@ -7,3 +7,5 @@ copy = $(subst $(LOCAL_SRC_DIR)/gct/,,$(header_raw))
 objs = libgct.o
 
 DIR_CFLAGS = -Wno-maybe-uninitialized
+
+ext_hg = gct 6b4b0bc1e8c6cd3459c2cefe898945641dfbf60c http://hg.savannah.nongnu.org/hgweb/gct

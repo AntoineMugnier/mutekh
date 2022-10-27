@@ -17,6 +17,7 @@ objs += src/console_complete.o
 endif
 endif
 
+ext_hg = libtermui d23a52778ae5a6bd85bfb61cfb3d535f2b66f67f http://hg.savannah.nongnu.org/hgweb/libtermui
 
 DIR_CFLAGS=-I $(LOCAL_SRC_DIR)
 
