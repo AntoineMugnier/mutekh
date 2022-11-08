@@ -278,6 +278,7 @@ subdirs-defined:=
 pre_headers-defined:=
 enum_headers-defined:=
 ext_hg:=
+DIR_CFLAGS:=
 
 include $$(LOCAL_SRC_DIR)/Makefile
 
