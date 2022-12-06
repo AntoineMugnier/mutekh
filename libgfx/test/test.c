@@ -15,7 +15,7 @@
 
 int main(int argc, char **argv)
 {
-  static const uint32_t scale = 4;
+  static const uint32_t scale = 1;
 
   if (argc <= 1)
     {
@@ -35,7 +35,7 @@ int main(int argc, char **argv)
 
   /* Set up screen */
   SDL_Surface *screen;
-  screen = SDL_SetVideoMode(64 * scale, 128 * scale, 32, SDL_SWSURFACE);
+  screen = SDL_SetVideoMode(512 * scale, 256 * scale, 32, SDL_SWSURFACE);
   assert(screen->format->BitsPerPixel == 32);
 
   int quit = 0;
