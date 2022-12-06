@@ -409,7 +409,7 @@ DRIVER_CLASS_TYPES(DRIVER_CLASS_DMA, dma,
   }
 
 # define DEV_STATIC_RES_DEV_DMA(path_)                    \
-  DEV_STATIC_RES_DEV_PARAM("dma", path_)
+  DEV_STATIC_RES_DEVCLASS_PARAM("dma", path_, DRIVER_CLASS_DMA)
 
 #else
 
