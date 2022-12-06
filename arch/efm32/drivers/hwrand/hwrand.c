@@ -147,6 +147,10 @@ static DEV_INIT(efm32_hwrand_init)
       goto done;
     }
 
+  /* Enable BUSCLK */
+  uint32_t busclken = cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_HFBUSCLKEN0_ADDR);
+  cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_HFBUSCLKEN0_ADDR, busclken | EFM32_CMU_HFBUSCLKEN0_LE);
+
   /* Enable LFRCO */
   cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_OSCENCMD_ADDR, EFM32_CMU_OSCENCMD_LFRCOEN);
   while (!(cpu_mem_read_32(EFM32_CMU_ADDR + EFM32_CMU_STATUS_ADDR) & EFM32_CMU_STATUS_LFRCORDY))
@@ -205,6 +209,7 @@ static DEV_INIT(efm32_hwrand_init)
 
   cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_LFECLKSEL_ADDR, lfeclksel);
   cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_LFECLKEN0_ADDR, lfclken);
+  cpu_mem_write_32(EFM32_CMU_ADDR + EFM32_CMU_HFBUSCLKEN0_ADDR, busclken);
 #else
 # error
 #endif
