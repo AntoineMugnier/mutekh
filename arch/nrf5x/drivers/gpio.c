@@ -560,8 +560,6 @@ static DEV_INIT(nrf5x_gpio_init)
   __unused__ uintptr_t addr = 0;
   struct nrf5x_gpio_private_s *pv;
 
-  assert(!device_res_get_uint(dev, DEV_RES_MEM, 0, &addr, NULL) && GPIOTE_ADDR == addr);
-
   pv = mem_alloc(sizeof(*pv), mem_scope_sys);
   if (!pv)
     return -ENOMEM;
@@ -577,6 +575,8 @@ static DEV_INIT(nrf5x_gpio_init)
     goto err_mem;
 
 # if CONFIG_DRIVER_NRF5X_GPIO_ICU_CHANNEL_COUNT
+  assert(!device_res_get_uint(dev, DEV_RES_MEM, 0, &addr, NULL) && GPIOTE_ADDR == addr);
+
   for (int8_t i = 0; i < CONFIG_DRIVER_NRF5X_GPIO_ICU_CHANNEL_COUNT; ++i) {
     nrf_reg_set(GPIOTE_ADDR, NRF_GPIOTE_CONFIG(i + CONFIG_DRIVER_NRF5X_GPIO_TE_FIRST),
                 NRF_GPIOTE_CONFIG_MODE_DISABLED);
