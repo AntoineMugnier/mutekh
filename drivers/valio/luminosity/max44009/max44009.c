@@ -151,11 +151,11 @@ DEV_VALIO_REQUEST(max44009_request)
   struct max44009_context_s *pv = dev->drv_pv;
   (void)pv;
 
-  logk_debug("%s %p", __func__, req);
+  logk_debug("%s %p", __func__, rq);
 
   if (pv->state == MAX44009_INITING) {
     rq->error = -EAGAIN;
-    dev_valio_rq_done(req);
+    dev_valio_rq_done(rq);
     return;
   }
 
@@ -167,7 +167,7 @@ DEV_VALIO_REQUEST(max44009_request)
       goto notsup;
 
     rq->error = 0;
-    dev_valio_rq_pushback(&pv->queue, req);
+    dev_valio_rq_pushback(&pv->queue, rq);
 
     if (rq->type == DEVICE_VALIO_READ)
       max44009_read(dev);
@@ -180,7 +180,7 @@ DEV_VALIO_REQUEST(max44009_request)
       bc_set_reg(&pv->i2c_rq.vm, MAX44009_I2C_BCGLOBAL_IF_ABOVE, l->if_above);
       bc_set_reg(&pv->i2c_rq.vm, MAX44009_I2C_BCGLOBAL_IF_BELOW, l->if_below);
       rq->error = 0;
-      dev_valio_rq_done(req);
+      dev_valio_rq_done(rq);
 
       pv->limits_dirty = 1;
       if (!dev_rq_queue_isempty(&pv->queue))
@@ -193,7 +193,7 @@ DEV_VALIO_REQUEST(max44009_request)
   default:
   notsup:
     rq->error = -ENOTSUP;
-    dev_valio_rq_done(req);
+    dev_valio_rq_done(rq);
     return;
   }
 }
@@ -207,12 +207,12 @@ DEV_VALIO_CANCEL(max44009_cancel)
 
   LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
-  logk_debug("%s %p", __func__, req);
+  logk_debug("%s %p", __func__, rq);
 
   GCT_FOREACH(dev_request_queue, &pv->queue, item, {
       struct dev_valio_rq_s *rq = dev_valio_rq_s_cast(item);
 
-      if (rq != req)
+      if (rq != rq)
         GCT_FOREACH_CONTINUE;
 
       dev_valio_rq_remove(&pv->queue, rq);
