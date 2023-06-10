@@ -44,7 +44,7 @@ DEV_DECLARE_STATIC(cpu_dev, "cpu", DEVICE_FLAG_CPU, arm32m_drv,
 #if defined(CONFIG_DRIVER_NRF5X_GPIO)
 
 DEV_DECLARE_STATIC(gpio_dev, "gpio", 0, nrf5x_gpio_drv,
-# if defined(CONFIG_DRIVER_NRF5X_GPIO_ICU)
+# if defined(CONFIG_DRIVER_NRF5X_GPIO_ICU) || defined(CONFIG_DRIVER_NRF5X_GPIO_UNTIL)
                    NRF_STATIC_RES_PERIPHERAL_MEM(NRF5X_GPIOTE),
                    DEV_STATIC_RES_DEV_ICU("/cpu"),
                    DEV_STATIC_RES_IRQ(0, NRF5X_GPIOTE, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
