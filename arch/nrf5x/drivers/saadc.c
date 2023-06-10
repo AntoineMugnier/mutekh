@@ -177,7 +177,7 @@ static DEV_INIT(nrf5x_saadc_init)
   size_t pin_count = 0;
   error_t err;
 
-  err = device_iomux_setup(dev, "ch0 ch1? ch2? ch3? ch4? ch5? ch6? ch7?", NULL, pin, config);
+  err = device_iomux_setup(dev, "ch0? ch1? ch2? ch3? ch4? ch5? ch6? ch7?", NULL, pin, config);
   if (err)
     return err;
 
