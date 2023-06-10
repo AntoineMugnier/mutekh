@@ -15,7 +15,7 @@
     License along with this program.  If not, see
     <http://www.gnu.org/licenses/>.
 
-    Copyright (c) Nicolas Pouillon <nipo@ssji.net> 2016
+    Copyright (c) Nicolas Pouillon <nipo@ssji.net> 2016-2022
 */
 
 /**
@@ -63,6 +63,16 @@ struct driver_pcm_s;
 struct device_pcm_s;
 
 /**
+   @this defines the operation type.
+ */
+enum dev_pcm_op_type_e
+{
+  DEV_PCM_OP_INIT,
+  DEV_PCM_OP_STREAM,
+  DEV_PCM_OP_CLOSE,
+};
+
+/**
    @this defines the sample format in sample buffers.
  */
 enum dev_pcm_data_type_e
@@ -89,29 +99,39 @@ enum dev_pcm_data_direction_e
   DEV_PCM_DIR_OUTPUT,
 };
 
-/**
-   Flag set on request kroutine when end of streaming occurs.
- */
-#define DEV_PCM_END_FLAG KROUTINE_EXEC_USERFLAG_1
+struct dev_pcm_stream_s {
+  void *buffer;
+  uint8_t stride;
+
+  enum dev_pcm_data_type_e sample_type : 4;
+  enum dev_pcm_data_direction_e direction : 1;
+  uint8_t channel_id:3;
+};
 
 /**
    @this is the PCM request structure.  Application must fill it with
-   a @tt sample_rate, @tt sample_count, @tt stream_count, and for each
-   stream, @tt sample_type, @tt direction and @tt channel_id.
+   @tt session_id = 0, a @tt sample_rate, @tt sample_count, @tt
+   stream_count, and for each stream, @tt sample_type, @tt direction
+   and @tt channel_id, then request with op = .._INIT.
 
-   If it accepts the request, driver will give @tt
-   effective_sample_rate, allocate @tt buffer and fill in @tt stride
+   If it accepts the request, driver will fill @tt session_id, give
+   @tt effective_sample_rate, allocate buffers internally, and give
+   one buffer pointer per stream in @tt buffer and fill in @tt stride
    for each stream.
 
-   In order to keep the request scheduled, application must increase
-   or overwrite @tt frames_left in order to set it to a non-zero
-   value.  Device decrements the value on each frame, when it reaches
-   0, request gets stopped.
+   Application should then fill / retrieve every sample in each stream
+   pointed by @tt buffer / @tt stride / @tt sample_count and resubmit
+   the request with op = .._STREAM.
 
-   If request struct kroutine is signalled with @tt DEV_PCM_END_FLAG
-   set in flags (@see kroutine_exec_t), buffers should not be used any
-   more: they got destroyed, because of an error or because streaming
-   got stopped by the application.
+   When done with streaming, application should submit one last
+   request with op = .._CLOSE.
+
+   After call to _INIT and _STREAM, buffer pointer may change and
+   application should use the currently-pointed buffers. These may be
+   offline DMA-able buffers managed by the driver.
+
+   @tt session_id should remain constant for every subsequent _STREAM
+   and _CLOSE operations.
  */
 struct dev_pcm_rq_s
 {
@@ -121,23 +141,15 @@ struct dev_pcm_rq_s
     FIELD_USING(struct dev_request_s, pvdata);
   };
 
-  uint8_t offline_buffer_index :1;
+  enum dev_pcm_op_type_e op;
+  uint32_t session_id;
 
   uint32_t sample_rate;
   uint32_t effective_sample_rate;
   size_t stream_count;
   size_t sample_count;
 
-  atomic_t frames_left;
-
-  struct dev_pcm_stream_s {
-    void *buffer[2];
-    uint8_t stride;
-
-    enum dev_pcm_data_type_e sample_type : 4;
-    enum dev_pcm_data_direction_e direction : 1;
-    uint8_t channel_id:3;
-  } stream[0];
+  struct dev_pcm_stream_s stream[0];
 };
 
 DEV_REQUEST_INHERIT(pcm); DEV_REQUEST_QUEUE_OPS(pcm);
@@ -157,8 +169,8 @@ DEV_REQUEST_INHERIT(pcm); DEV_REQUEST_QUEUE_OPS(pcm);
 
    @param dev Pointer to device descriptor
    @param rq Pointer to request
-   @returns 0 if request is scheduled for starting, -ENOTSUP if
-            some parameters are not possible
+   @returns 0 if request is blocking, -ENOTSUP/-EINVAL/-ENOMEM if some
+            parameters are not possible
 */
 typedef DEV_PCM_REQUEST(dev_pcm_request_t);
 
