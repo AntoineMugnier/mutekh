@@ -24,6 +24,7 @@ objs-$(CONFIG_DRIVER_NRF52_IR_BLASTER) += ir_blaster.o
 objs-$(CONFIG_DRIVER_NRF52_USBD) += usbd.o
 objs-$(CONFIG_DRIVER_NRF5X_ONEWIRE) += onewire.o
 objs-$(CONFIG_DRIVER_NRF5X_TEMP) += temp.o
+objs-$(CONFIG_DRIVER_NRF5X_QDEC) += qdec.o
 
 ifeq ($(CONFIG_DRIVER_NRF5X_BLE), defined)
 objs += ble.o ble_primitives.o
