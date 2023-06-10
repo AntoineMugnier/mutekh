@@ -622,11 +622,8 @@ void nrf5x_ble_reschedule(struct nrf5x_ble_private_s *pv)
               dprintk(" %p %lld %d\n", c, c->event_begin, c->layer.handler->type);
               );
 
-  if (pv->current)
+  if (pv->current || pv->transmitting)
     return;
-
-  assert(!pv->transmitting);
-  assert(!pv->current);
 
   struct nrf5x_ble_context_s *ctx = nrf5x_ble_context_list_head(&pv->context_list);
 

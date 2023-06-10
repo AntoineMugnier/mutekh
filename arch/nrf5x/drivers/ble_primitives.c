@@ -53,8 +53,8 @@ void nrf5x_ble_rtc_start(struct nrf5x_ble_private_s *pv)
   nrf5x_ble_backlog(pv->current, "RTC start", 0);
 
   nrf_it_disable_mask(BLE_RTC_ADDR, -1);
-  nrf_it_enable(BLE_RTC_ADDR, NRF_RTC_OVERFLW);
   nrf_evt_disable_mask(BLE_RTC_ADDR, -1);
+  nrf_it_enable(BLE_RTC_ADDR, NRF_RTC_OVERFLW);
   nrf_task_trigger(BLE_RTC_ADDR, NRF_RTC_START);
 }
 

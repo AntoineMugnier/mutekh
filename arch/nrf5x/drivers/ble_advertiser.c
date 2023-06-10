@@ -80,8 +80,6 @@ static void advertiser_schedule(struct nrf5x_ble_advertiser_s *adv)
 {
   dev_timer_value_t now, begin;
 
-  //printk("%s %d\n", __FUNCTION__, net_layer_refcount(&adv->layer));
-  
   if (!net_layer_refcount(&adv->layer))
     return;
 
@@ -89,6 +87,8 @@ static void advertiser_schedule(struct nrf5x_ble_advertiser_s *adv)
   begin = now + adv->interval_tk + (adv->delay_max_tk & rand());
 
   nrf5x_ble_context_schedule(&adv->context, begin, 0, 0, 0, 100000);
+
+  printk("adv sched at %llx\n", begin);
 }
 
 static bool_t advertiser_ctx_event_opened(struct nrf5x_ble_context_s *context)

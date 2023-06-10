@@ -473,7 +473,7 @@ void master_ctx_event_closed(struct nrf5x_ble_context_s *context,
           master->event_rx_count,
           master->event_tx_count, master->event_acked_count, master->event_crc_error);
 
-  if (master->event_rx_count && !master->event_acked_count)
+  if (!master->event_acked_count)
     master->stuck_events_left--;
   if (master->stuck_events_left == 0)
     nrf5x_ble_master_error(master, BLE_CONNECTION_TIMEOUT);
