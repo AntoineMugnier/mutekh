@@ -231,7 +231,7 @@ static KROUTINE_EXEC(i2c_bb_runner)
 
         pv->current = NULL;
 
-        rq->error = -bit_get_mask(op, 0, 8);
+        rq->err = -bit_get_mask(op, 0, 8);
         kroutine_exec(&rq->kr);
 
         continue;
