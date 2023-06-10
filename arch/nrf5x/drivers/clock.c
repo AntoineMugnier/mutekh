@@ -154,13 +154,6 @@ static bool_t nrf5x_clock_hfxo_is_running(void)
     == (NRF_CLOCK_HF_SRC_XTAL | NRF_CLOCK_HFCLKSTAT_STATE_RUNNING);
 }
 
-static bool_t nrf5x_clock_hf_is_running(uint_fast8_t type)
-{
-  uint32_t state = nrf_reg_get(CLOCK_ADDR, NRF_CLOCK_HFCLKSTAT);
-
-  return state == (NRF_CLOCK_HFCLKSTAT_STATE_RUNNING | type);
-}
-
 static uint_fast8_t nrf5x_clock_hf_src(void)
 {
   return nrf_reg_get(CLOCK_ADDR, NRF_CLOCK_HFCLKSTAT)
@@ -653,6 +646,8 @@ static DEV_CMU_COMMIT(nrf5x_clock_commit)
 {
   struct nrf5x_clock_context_s *pv = dev->drv_pv;
 
+  logk_trace("lfclk %d %d %d", pv->lf_src,
+             nrf5x_clock_lf_src(), nrf5x_clock_lfclk_is_running());
   if (pv->lf_src != nrf5x_clock_lf_src() && nrf5x_clock_lfclk_is_running()) {
     nrf5x_clock_lfclk_stop();
     while (nrf5x_clock_lfclk_is_running())
@@ -670,7 +665,7 @@ static DEV_CMU_COMMIT(nrf5x_clock_commit)
   nrf_reg_set(CLOCK_ADDR, NRF_CLOCK_LFRCMODE, pv->lf_ulp ? NRF_CLOCK_LFRCMODE_MODE_ULP : 0);
 #endif
 
-  if (nrf5x_clock_hf_is_running(NRF_CLOCK_HF_SRC_XTAL)
+  if (nrf5x_clock_hfxo_is_running()
       && pv->hf_src == NRF_CLOCK_HF_SRC_RC) {
     nrf5x_clock_hfxo_stop();
     /* while (nrf5x_clock_hfxo_is_running()) */
@@ -734,7 +729,8 @@ static DEV_CLOCK_SRC_SETUP(nrf5x_clock_ep_setup)
     switch (id) {
     case NRF_CLOCK_SRC_LFCLK: {
       bool_t cken = !!(param->flags & DEV_CLOCK_EP_CLOCK);
-      logk_trace("lfclk gating gate %d current %d", cken, pv->lfclk_required);
+      logk_trace("lfclk gating gate %d current %d src %d", cken, pv->lfclk_required, pv->lf_src);
+      cken |= pv->lf_src == NRF_CLOCK_LF_SRC_SYNTH;
       if (cken != pv->lfclk_required) {
 
         pv->lfclk_required = cken;
