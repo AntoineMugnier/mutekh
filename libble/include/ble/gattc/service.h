@@ -46,6 +46,33 @@ enum ble_gattc_service_flags_e
   BLE_GATTC_SERVICE_SOLLICIT = 2,
 };
 
+struct ble_gattc_descriptor_s
+{
+  const struct ble_uuid_s *type;
+};
+
+#define BLE_GATTC_DESCRIPTOR(type_) { .type = type_, }
+
+struct ble_gattc_characteristic_s
+{
+  const struct ble_uuid_s *type;
+  const struct ble_gattc_descriptor_s *descriptor;
+  uint16_t max_size;
+  uint16_t descriptor_count : 6;
+
+  void (*on_discovery)(struct ble_gattc_registry_s *reg,
+                       uint8_t descriptor_index, uint8_t instance_index,
+                       uint16_t value_handle);
+};
+
+#define BLE_GATTC_CHAR(type_, flags_, desc_...)                         \
+  {                                                                     \
+    .type = (type_),                                                    \
+    .descriptor = (const struct ble_gattc_descriptor_s[]){ desc_ },     \
+    .descriptor_count = ARRAY_SIZE(((const struct ble_gattc_descriptor_s[]){ desc_ })), \
+    .flags = flags_,                                                    \
+  }
+
 struct ble_gattc_service_s
 {
   const struct ble_uuid_s *type;
@@ -67,58 +94,5 @@ struct ble_gattc_service_s
     .characteristic_count = ARRAY_SIZE(((const struct ble_gattc_characteristic_s[]){ chars_ })), \
     .flags = flags_,                                                    \
   }
-
-enum ble_gattc_characteristic_flag_e
-{
-  BLE_GATTC_CHAR_REQUIRED = 1,
-  BLE_GATTC_CHAR_UNIQUE = 2,
-  BLE_GATTC_CHAR_READ = 4,
-};
-
-enum ble_gattc_subscription_mode_e
-{
-  BLE_GATTC_CHAR_SUBSCRIBE_NONE,
-  BLE_GATTC_CHAR_SUBSCRIBE_NOTIFICATION,
-  BLE_GATTC_CHAR_SUBSCRIBE_INDICATION,
-};
-
-struct ble_gattc_characteristic_s
-{
-  const struct ble_uuid_s *type;
-  const struct ble_gattc_descriptor_s *descriptor;
-  uint16_t max_size;
-  uint16_t descriptor_count : 6;
-  uint16_t subscription_mode : 2;
-  uint16_t max_instance_count : 5;
-  uint16_t flags : 3;
-
-  void (*on_characteristic_data)(struct ble_gattc_registry_s *reg,
-                                 uint8_t char_index, uint8_t instance_index,
-                                 const uint8_t *value, size_t size);
-
-  void (*on_subscription_done)(struct ble_gattc_registry_s *reg,
-                               enum ble_gattc_subscription_mode_e mode);
-};
-
-#define BLE_GATTC_CHAR(type_, flags_, desc_...)                         \
-  {                                                                     \
-    .type = (type_),                                                    \
-    .descriptor = (const struct ble_gattc_descriptor_s[]){ desc_ },     \
-    .descriptor_count = ARRAY_SIZE(((const struct ble_gattc_descriptor_s[]){ desc_ })), \
-    .flags = flags_,                                                    \
-  }
-
-enum ble_gattc_descriptor_flag_e
-{
-  BLE_GATTC_DESCRIPTOR_REQUIRED = 1,
-  BLE_GATTC_DESCRIPTOR_READ = 2,
-};
-
-struct ble_gattc_descriptor_s
-{
-  const struct ble_uuid_s *type;
-  uint8_t flags;
-  uint8_t max_size;
-};
 
 #endif
