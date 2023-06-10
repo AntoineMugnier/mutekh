@@ -165,7 +165,7 @@ struct device_node_s
 #endif
 
   enum device_flags_e           BITFIELD(flags,8);
-} __attribute__((packed))
+} __attribute__((packed,aligned(4)))
 #ifdef CONFIG_DEVICE_TREE
  *, list_entry);
 

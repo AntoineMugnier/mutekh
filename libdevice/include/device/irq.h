@@ -84,7 +84,7 @@ struct dev_irq_ep_s
 
   /** Number of links */
   uint8_t link_count;
-} __attribute__ ((packed));
+} __attribute__ ((packed,aligned(4)));
 
 
 /** @csee dev_irq_src_process_t */
