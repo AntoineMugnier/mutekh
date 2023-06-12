@@ -8,9 +8,11 @@
 #include <mutek/printk.h>
 #include <mutek/startup.h>
 #include <mutek/thread.h>
+#include <hexo/power.h>
 
 #include <device/driver.h>
 #include <device/device.h>
+#include <device/class/timer.h>
 
 #include <ble/stack/context.h>
 #include <ble/profile/fluke/central.h>
@@ -19,6 +21,8 @@
 struct app_s {
   struct ble_stack_context_s context;
   struct fluke_central_s fluke;
+  struct device_timer_s timer;
+  dev_timer_delay_t sec;
 };
 
 STRUCT_COMPOSE(app_s, context);
@@ -35,6 +39,8 @@ static
 void fluke_disconnected(struct fluke_central_s *client)
 {
   logk("Fluke disconnected");
+
+  power_reboot();
 }
 
 static
@@ -50,11 +56,19 @@ static
 void fluke_measurement(struct fluke_central_s *client,
                     const struct fluke_measurement_s *measurement)
 {
+  struct app_s *app = app_s_from_fluke(client);
+
   char meas_str[32];
+  dev_timer_value_t ts;
+  uint64_t ms;
 
   fluke_measurement_value_to_string(measurement, meas_str);
-  
-  logk("%s\n", meas_str);
+
+  DEVICE_OP(&app->timer, get_value, &ts, 0);
+
+  ms = ts * 1000 / app->sec;
+
+  printk("@%lld: %s\n", ms, meas_str);
 }
 
 static const struct fluke_central_vtable_s fluke_vtable =
@@ -78,6 +92,14 @@ static CONTEXT_ENTRY(main)
                                NULL);
   ensure(!err);
 
+  err = device_get_accessor_by_path(&app->timer.base, NULL, "rtc* timer*", DRIVER_CLASS_TIMER);
+  logk("timer: %d");
+  ensure(!err);
+
+  device_start(&app->timer.base);
+  dev_timer_init_sec(&app->timer, &app->sec, NULL, 1, 1);
+  logk("sec: %d", app->sec);
+  
   err = fluke_central_init(&app->fluke, &app->context, &fluke_vtable);
   ensure(!err);
 

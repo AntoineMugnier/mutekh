@@ -71,6 +71,7 @@ void fluke_central_client_create(struct fluke_central_s *fc)
                             fc, &client_fluke_central_vtable, &fc->client);
   if (err) {
     logk_error("Unable to create device client layer: %d", err);
+    fc->vtable->disconnected(fc);
     return;
   }
 
