@@ -24,7 +24,7 @@
 
 #### LINE 25 IS HERE ####
 
-GNU_MIRROR=ftp://ftp.gnu.org/gnu
+GNU_MIRROR=https://ftp.gnu.org/gnu
 
 # Target architecture
 TARGET=mipsel
@@ -33,13 +33,13 @@ TARGET=mipsel
 BLDMAKE_OPTS= -j8
 
 # Install PATH
-PREFIX=/opt/mutekh
+PREFIX=/opt/mutekh-2023
 
 # Temp directory
 WORKDIR=/tmp/crossgen
 
 common_CONF=
-binutils_VER_common  = 2.25
+binutils_VER_common  = 2.40
 
 # GNU Binutils
 binutils_VER_mipsel  = $(binutils_VER_common)
@@ -57,7 +57,7 @@ binutils_VER_avr32   = 2.22
 binutils_VER=$(binutils_VER_$(TARGET))
 binutils_CONF=$(common_CONF) --enable-plugins=no
 
-gcc_VER_common  = 4.9.3
+gcc_VER_common  = 13.1.0
 
 # GNU Compiler
 gcc_VER_mipsel  = $(gcc_VER_common)
@@ -67,7 +67,7 @@ gcc_VER_powerpc = $(gcc_VER_common)
 SUFFIX_powerpc  = unknown-elf
 
 gcc_VER_arm     = $(gcc_VER_common)
-gcc_CONF_arm    = --with-arch=armv4t --with-fpu=vfp --with-float=soft
+gcc_CONF_arm    = --with-arch=armv8-m.base --with-fpu=vfp --with-float=soft
 SUFFIX_arm      = mutekh-eabi
 
 gcc_VER_i686    = $(gcc_VER_common)
@@ -98,15 +98,15 @@ gcc_VER=$(gcc_VER_$(TARGET))
 gcc_CONF=$(common_CONF) --enable-languages=c --disable-libssp --enable-multilib --disable-lto --disable-libquadmath --enable-checking=release --with-system-zlib
 
 # GCC requirements
-mpfr_VER=2.4.2
-gmp_VER=4.3.2
-mpc_VER=0.9
-sed_VER=4.2
+mpfr_VER=4.2.0
+gmp_VER=6.2.1
+mpc_VER=1.3.1
+sed_VER=4.9
 
 # GNU Debugger
 gdb_VER_mipsel  = 8.3
 gdb_VER_powerpc = 8.3
-gdb_VER_arm     = 8.3
+gdb_VER_arm     = 13.2
 gdb_VER_i686    = 8.3
 gdb_VER_x86_64  = 8.3
 gdb_VER_nios2   = 8.3
@@ -117,7 +117,7 @@ gdb_VER_m68k   = 8.3
 gdb_VER_avr32   = 6.7.1
 
 gdb_VER=$(gdb_VER_$(TARGET))
-gdb_CONF=$(common_CONF) --with-python=no --disable-sim
+gdb_CONF=$(common_CONF)
 
 # Device Tree Compiler
 dtc_VER=1.2.0
@@ -144,15 +144,15 @@ SUFFIX=$(SUFFIX_$(TARGET))
 
 # packages configurations
 
-binutils_ARCHIVE=binutils-$(binutils_VER).tar.bz2
+binutils_ARCHIVE=binutils-$(binutils_VER).tar.gz
 binutils_URL=$(GNU_MIRROR)/binutils/$(binutils_ARCHIVE)
 binutils_TESTBIN=bin/$(TARGET)-$(SUFFIX)-as
 
-sed_ARCHIVE=sed-$(sed_VER).tar.bz2
+sed_ARCHIVE=sed-$(sed_VER).tar.gz
 sed_URL=$(GNU_MIRROR)/sed/$(sed_ARCHIVE)
 sed_TESTBIN=bin/sed
 
-gcc_ARCHIVE=gcc-$(gcc_VER).tar.bz2
+gcc_ARCHIVE=gcc-$(gcc_VER).tar.gz
 gcc_URL=$(GNU_MIRROR)/gcc/gcc-$(gcc_VER)/$(gcc_ARCHIVE)
 gcc_TESTBIN=bin/$(TARGET)-$(SUFFIX)-gcc
 gcc_DEPS=binutils mpfr gmp mpc
@@ -162,7 +162,7 @@ gdb_ARCHIVE=gdb-$(gdb_VER).tar.gz
 gdb_URL=$(GNU_MIRROR)/gdb/gdb-$(gdb_VER).tar.gz
 gdb_TESTBIN=bin/$(TARGET)-$(SUFFIX)-gdb
 
-mpfr_ARCHIVE=mpfr-$(mpfr_VER).tar.bz2
+mpfr_ARCHIVE=mpfr-$(mpfr_VER).tar.gz
 mpfr_URL=$(GNU_MIRROR)/mpfr/$(mpfr_ARCHIVE)
 mpfr_TESTBIN=lib/libmpfr.a
 mpfr_DEPS=gmp
@@ -173,7 +173,7 @@ gmp_URL=$(GNU_MIRROR)/gmp/$(gmp_ARCHIVE)
 gmp_TESTBIN=lib/libgmp.a
 
 mpc_ARCHIVE=mpc-$(mpc_VER).tar.gz
-mpc_URL=http://www.multiprecision.org/mpc/download/$(mpc_ARCHIVE)
+mpc_URL=$(GNU_MIRROR)/mpc/$(mpc_ARCHIVE)
 mpc_TESTBIN=lib/libmpc.a
 mpc_DEPS=mpfr gmp
 mpc_CONF+=--with-mpfr=$(PREFIX) --with-gmp=$(PREFIX)
@@ -275,7 +275,7 @@ $$($(1)_STAMP)-patch: $$($(1)_DIR)
         # try to fetch a patch
 	wget $$(WGET_OPTS) $$(PATCH_URL)/$(1)-$$($(1)_VER)-latest.diff.gz -O $$($(1)_PATCH).gz || rm -f $$($(1)_PATCH).gz
         # test if a patch is available and apply
-	( cd $$($(1)_DIR) ; cat $$($(1)_PATCH).gz | gunzip | patch -p 0 --merge )
+	-( cd $$($(1)_DIR) ; cat $$($(1)_PATCH).gz | gunzip | patch -p 0 )
 	touch $$@
 
 $$($(1)_STAMP)-$$(TARGET)-conf: $$($(1)_DIR) $$($(1)_STAMP)-patch $$($(1)_DEPS)
@@ -315,7 +315,7 @@ $$($(1)_STAMP)-patch: $$($(1)_DIR)
         # try to fetch a patch
 	wget $$(WGET_OPTS) $$(PATCH_URL)/$(1)-$$($(1)_VER)-latest.diff.gz -O $$($(1)_PATCH).gz || rm -f $$($(1)_PATCH).gz
         # test is a patch is available and apply
-	( cd $$($(1)_DIR) ; cat $$($(1)_PATCH).gz | gunzip | patch -p 0 --merge )
+	-( cd $$($(1)_DIR) ; cat $$($(1)_PATCH).gz | gunzip | patch -p 0 )
 	touch $$@
 
 $$($(1)_TGZ): $$($(1)_STAMP)-wget
