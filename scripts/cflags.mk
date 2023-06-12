@@ -26,6 +26,7 @@ CFLAGS=	-std=gnu99 -nostdlib -fno-builtin -foptimize-sibling-calls \
 
 CC=$(CCACHE) $(CPUTOOLS)gcc
 CXX=$(CCACHE) $(CPUTOOLS)g++
+DECL_FILTER_CC ?= $(CC)
 HOSTCC=gcc
 DEPCC?=$(CC)
 CPP=$(CPUTOOLS)cpp

@@ -78,6 +78,9 @@ $(3)/$(1): $(2)/$(1)
 endef
 
 
+decl_filter_cflags_nest = $(call decl_filter_cflags_one,$(filter-out $1,$3),$(patsubst $(DECL_FILTER_REPLACE_$1_from),$(DECL_FILTER_REPLACE_$1_to),$2))
+decl_filter_cflags_one = $(if $1,$(call decl_filter_cflags_nest,$(firstword $1),$2,$1),$2)
+decl_filter_cflags = $(call decl_filter_cflags_one,$(DECL_FILTER_REPLACE),$1)
 
 ## declare_obj: file_name, src_dir, obj_dir
 
@@ -101,9 +104,9 @@ $(3)/$(1): $(2)/$(1:.o=.S)
 	$(call run_command,$$@, $(CC) -E \
                 $(CFLAGS) $(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) -I$(3) \
                 $($(1)_CFLAGS) $(DIR_CFLAGS) $$< -o $$@.i )
-	$(call run_command,$$@, perl $(MUTEK_SRC_DIR)/scripts/decl_filter.pl --filter-gnuasm --parse-decl $(CC) \
-                $(CFLAGS) $(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) -I$(3) \
-                $($(1)_CFLAGS) $(DIR_CFLAGS) < $$@.i > $$@.s)
+	$(call run_command,$$@, perl $(MUTEK_SRC_DIR)/scripts/decl_filter.pl --filter-gnuasm --parse-decl $(DECL_FILTER_CC) \
+                $(call decl_filter_cflags,$(CFLAGS) $(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) -I$(3) \
+                $($(1)_CFLAGS) $(DIR_CFLAGS)) < $$@.i > $$@.s)
 	$(call compile,$(CC),$$@, -x assembler-with-cpp $$@.s, $($(1)_CFLAGS) $(DIR_CFLAGS))
 
 else ifneq ($(wildcard $(2)/$(1:.o=.dts)),) ######################################### device-tree file)
@@ -149,9 +152,9 @@ $(3)/$(1): $(2)/$(1:.o=.bc)
 	$(call run_command,$$@, $(CC) -E -x c \
                 $(CFLAGS) $(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) -I$(3) \
                 $($(1)_CFLAGS) $(DIR_CFLAGS) -DMUTEK_CFILE='"$$(<F)"' $$< -o $$@.i )
-	$(call run_command,$$@, perl $(MUTEK_SRC_DIR)/scripts/decl_filter.pl --parse-decl $(CC) \
-                $(CFLAGS) $(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) -I$(3) \
-                $($(1)_CFLAGS) $(DIR_CFLAGS) < $$@.i > $$@.bc)
+	$(call run_command,$$@, perl $(MUTEK_SRC_DIR)/scripts/decl_filter.pl --parse-decl $(DECL_FILTER_CC) \
+                $(call decl_filter_cflags,$(CFLAGS) $(CPUCFLAGS) $(ARCHCFLAGS) $(INCS) -I$(3) \
+                $($(1)_CFLAGS) $(DIR_CFLAGS)) < $$@.i > $$@.bc)
 	$(call run_command,$$@, perl $(MUTEK_SRC_DIR)/scripts/bc_asm.pl $(BCPATH) $(BCFLAGS) -h $$@.h -o $$@.s < $$@.bc )
 	$(call compile,$(CC),$$@,$$@.s,$($(1)_CFLAGS) $(DIR_CFLAGS))
 	$(value do_hetlink_mangling)
