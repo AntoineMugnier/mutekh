@@ -253,6 +253,9 @@ SECTIONS
           .debug_funcnames 0 : { *(.debug_funcnames) }
           .debug_typenames 0 : { *(.debug_typenames) }
           .debug_varnames  0 : { *(.debug_varnames) }
+          /* DWARF 5+ */
+          .debug_rnglists     0 : { *(.debug_rnglists) }
+          .debug_line_str     0 : { *(.debug_line_str) }
 
  	/DISCARD/ : { *(.*) }
 
