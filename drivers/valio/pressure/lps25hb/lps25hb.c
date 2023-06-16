@@ -237,7 +237,10 @@ KROUTINE_EXEC(lps25hb_spi_done)
   } else if (pv->state == LPS25HB_INITIALIZING) {
     pv->state = LPS25HB_IDLE;
     logk_debug("init done");
-    lps25hb_wait(dev);
+    if (!dev_rq_queue_isempty(&pv->queue))
+      lps25hb_read(dev);
+    else
+      lps25hb_wait(dev);
   } else {
     pv->state = LPS25HB_IDLE;
 
