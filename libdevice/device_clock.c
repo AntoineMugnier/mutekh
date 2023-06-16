@@ -362,9 +362,11 @@ void dev_clock_sink_unlink(struct dev_clock_sink_ep_s *sink)
   if (src == NULL)
     return;
 
+#ifdef CONFIG_DEVICE_CLOCK_GATING
   // Remove requirements from endpoint, if any
   if (sink->flags & DEV_CLOCK_EP_ANY)
     dev_clock_sink_gate(sink, 0);
+#endif
 
   LOCK_SPIN_IRQ(&src->dev->lock);
 
