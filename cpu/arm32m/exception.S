@@ -29,6 +29,12 @@
 # include <arch/soclib/mem_checker.h>
 #endif
 
+#if CONFIG_CPU_ARM32M_ARCH_VERSION < 8
+# define ARM_EXC_RETURN_ADDR 0xfffffff9
+#else
+# define ARM_EXC_RETURN_ADDR 0xffffffb8
+#endif
+
 .syntax unified
 
 .section .excep,"ax"
@@ -46,39 +52,27 @@ CPU_NAME_DECL(reset_vector):
 #endif
         /* reset */
         .word mutekh_entry
-#if CONFIG_CPU_ARM32M_ARCH_VERSION >= 8
-        .word arm_exc_secure_hardfault1
-        .word arm_exc_dummy
-        .word arm_exc_secure_hardfault0
-        .word arm_exc_nonsecure_hardfault
-        .word arm_exc_memmanage /* memmanage */
-        .word arm_exc_busfault /* busfault */
-        .word arm_exc_usagefault /* usagefault */
-        .irp r, 4, 5, 6
-         .word arm_exc_dummy
-        .endr
-#else    
+
         /* nmi */
         .org CPU_NAME_DECL(exception_vector) + 2 * 4
         .word arm_exc_dummy
 
         /* faults */
         .org CPU_NAME_DECL(exception_vector) + 3 * 4
-# ifdef CONFIG_HEXO_EXCEP
-#  if CONFIG_CPU_ARM32M_ARCH_VERSION >= 7
+#ifdef CONFIG_HEXO_EXCEP
+# if CONFIG_CPU_ARM32M_ARCH_VERSION >= 7
         .word arm_exc_hardfault /* hardfault */
         .word arm_exc_memmanage /* memmanage */
         .word arm_exc_busfault /* busfault */
         .word arm_exc_usagefault /* usagefault */
-#  else
+# else
         .word arm_exc_fault /* hardfault */
-#  endif
+# endif
 
-# else /* !CONFIG_HEXO_EXCEP */
+#else /* !CONFIG_HEXO_EXCEP */
         .irp r, 3, 4, 5, 6
          .word arm_exc_dummy
         .endr
-# endif
 #endif
 
         /* syscall */
@@ -165,7 +159,7 @@ FUNC_START(.text, arm_exc_irq)
         b       arm_exc_preempt
 # else
         /* return */
-        ldr     r1,     = 0xfffffff9
+        ldr     r1,     = ARM_EXC_RETURN_ADDR
         bx      r1
 # endif
 FUNC_END(arm_exc_irq)
@@ -176,20 +170,6 @@ FUNC_END(arm_exc_irq)
 
 #ifdef CONFIG_HEXO_EXCEP
 # if CONFIG_CPU_ARM32M_ARCH_VERSION >= 7
-
-#  if CONFIG_CPU_ARM32M_ARCH_VERSION >= 8
-FUNC_START(.text, arm_exc_secure_hardfault1)
-        b       arm_exc_fault
-FUNC_END(arm_exc_secure_hardfault1)
-
-FUNC_START(.text, arm_exc_secure_hardfault0)
-        b       arm_exc_fault
-FUNC_END(arm_exc_secure_hardfault0)
-
-FUNC_START(.text, arm_exc_nonsecure_hardfault)
-        b       arm_exc_fault
-FUNC_END(arm_exc_nonsecure_hardfault)
-#  endif    
 
 FUNC_START(.text, arm_exc_hardfault)
         ldr     r1,     = ARMV7M_HFSR_ADDR
@@ -337,7 +317,7 @@ FUNC_START(.text, arm_exc_fault)
         b       arm_exc_preempt
 # else
         /* return */
-        ldr     r1,     = 0xfffffff9
+        ldr     r1,     = ARM_EXC_RETURN_ADDR
         bx      r1
 # endif
 FUNC_END(arm_exc_fault)
@@ -394,7 +374,7 @@ FUNC_START(.text, arm_exc_svcall)
         b       arm_exc_preempt
 # else
         /* return */
-        ldr     r1,     = 0xfffffff9
+        ldr     r1,     = ARM_EXC_RETURN_ADDR
         bx      r1
 # endif
 FUNC_END(arm_exc_svcall)
@@ -466,7 +446,7 @@ FUNC_START(.text, arm_exc_preempt)
         str     r2,     [r2]
 1:
         /* regular return from irq */
-        ldr     r1,     = 0xfffffff9
+        ldr     r1,     = ARM_EXC_RETURN_ADDR
         bx      r1
 FUNC_END(arm_exc_preempt)
 #endif

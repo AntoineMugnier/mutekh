@@ -55,7 +55,7 @@ FUNC_END(arm32m_bc_div32)
 /* trampolines for native bytecode custom instructions */
 FUNC_START(.text, arm32m_bc_trampoline)
 
-#if CONFIG_CPU_ARM32M_ARCH_VERSION == 7
+#if CONFIG_CPU_ARM32M_ARCH_VERSION >= 7
     /* get opcode */
         sub lr, #1
         ldrh r0, [lr], #2
@@ -81,7 +81,7 @@ FUNC_END(arm32m_bc_trampoline)
 /* trampolines for native bytecode custom conditional instructions */
 FUNC_START(.text, arm32m_bc_trampoline_cond)
 
-#if CONFIG_CPU_ARM32M_ARCH_VERSION == 7
+#if CONFIG_CPU_ARM32M_ARCH_VERSION >= 7
     /* get opcode */
         sub lr, #1
         ldrh r0, [lr], #2

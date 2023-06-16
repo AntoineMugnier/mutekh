@@ -116,15 +116,16 @@ static DEV_CPU_REG_INIT(arm_cpu_reg_init)
 #endif
 
 #if defined(CONFIG_CPU_ARM32M_MPU_STACK_GUARD) || defined(CONFIG_CPU_ARM32M_MPU_NULL_PTR)
+# if CONFIG_CPU_ARM32M_ARCH_VERSION == 7
   uint32_t type = cpu_mem_read_32(ARMV7M_MPU_TYPE_ADDR);
   uint_fast8_t r = 0;
 
-# ifdef CONFIG_CPU_ARM32M_MPU_STACK_GUARD
+#  ifdef CONFIG_CPU_ARM32M_MPU_STACK_GUARD
   r += ARM_M_STACK_GUARD_MPU_REGION_COUNT;
-# endif
-# ifdef CONFIG_CPU_ARM32M_MPU_NULL_PTR
+#  endif
+#  ifdef CONFIG_CPU_ARM32M_MPU_NULL_PTR
   r++;
-# endif
+#  endif
 
   if (r > ARMV7M_MPU_TYPE_DREGION_GET(type))
     {
@@ -133,7 +134,7 @@ static DEV_CPU_REG_INIT(arm_cpu_reg_init)
     }
   else
     {
-# ifdef CONFIG_CPU_ARM32M_MPU_NULL_PTR
+#  ifdef CONFIG_CPU_ARM32M_MPU_NULL_PTR
       cpu_mem_write_32(ARMV7M_MPU_RNR_ADDR,
           ARMV7M_MPU_RNR_REGION(r-1));
 
@@ -150,13 +151,15 @@ static DEV_CPU_REG_INIT(arm_cpu_reg_init)
             ((CONFIG_CPU_ARM32M_M_IRQ_COUNT < 16) << 3) |
             ((CONFIG_CPU_ARM32M_M_IRQ_COUNT < 24) << 4) |
             ((CONFIG_CPU_ARM32M_M_IRQ_COUNT < 32) << 5)));
-# endif
+#  endif
 
       /* enable MPU */
       cpu_mem_write_32(ARMV7M_MPU_CTRL_ADDR,
           ARMV7M_MPU_CTRL_ENABLE | ARMV7M_MPU_CTRL_PRIVDEFENA);
     }
-
+# else
+# error Unsupported arch revision
+# endif
 #endif
 }
 
