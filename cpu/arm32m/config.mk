@@ -32,6 +32,9 @@ CPUCFLAGS += -march=armv6-m
  ifeq ($(CONFIG_CPU_ARM32M_ARCH_VERSION), 7)
 CPUCFLAGS += -march=armv7-m
  endif
+ ifeq ($(CONFIG_CPU_ARM32M_ARCH_VERSION), 8)
+CPUCFLAGS += -march=armv8-m
+ endif
 endif
 
 ifeq ($(CONFIG_CPU_ARM32M_ARCH_VERSION), 6)
@@ -52,7 +55,7 @@ ifeq ($(CONFIG_CPU_ARM32M_ARCH_VERSION), 8)
 #LIBGCC_DIR += /v8m/thumb
 DECL_FILTER_CC = /opt/mutekh/bin/arm-mutekh-eabi-gcc
 DECL_FILTER_REPLACE = cpu
-DECL_FILTER_REPLACE_cpu_from = -mcpu=cortex-m33
+DECL_FILTER_REPLACE_cpu_from = -mcpu=$(CONFIG_COMPILE_MCPU)
 DECL_FILTER_REPLACE_cpu_to = -mcpu=cortex-m4
   ifeq ($(CONFIG_MUTEK_BYTECODE_NATIVE), defined)
   BCFLAGS+= -b armv7m
