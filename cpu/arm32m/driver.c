@@ -52,7 +52,15 @@ static CPU_INTERRUPT_HANDLER(arm_irq_handler)
 #endif
 
     case 16 ... 16+CONFIG_CPU_ARM32M_M_IRQ_COUNT-1: {
-      struct dev_irq_sink_s *sink = pv->sinks + irq - 16;
+      uint_fast8_t irq_no = irq - 16;
+# if CONFIG_CPU_ARM32M_M_IRQ_COUNT != CONFIG_CPU_ARM32M_M_IRQ_MAPPED_COUNT
+      uint_fast8_t sink_index = pv->sink_mapping[irq_no];
+      if (sink_index >= CONFIG_CPU_ARM32M_M_IRQ_MAPPED_COUNT)
+        break;
+      struct dev_irq_sink_s *sink = pv->sinks + sink_index;
+# else
+      struct dev_irq_sink_s *sink = pv->sinks + irq_no;
+# endif
       device_irq_sink_process(sink, 0);
       break;
     }
@@ -66,8 +74,18 @@ static DEV_ICU_GET_SINK(arm_icu_get_sink)
   struct device_s *dev = accessor->dev;
   struct arm_dev_private_s  *pv = dev->drv_pv;
 
-  if (id < CONFIG_CPU_ARM32M_M_IRQ_COUNT)
-    return &pv->sinks[id];
+  if (id < CONFIG_CPU_ARM32M_M_IRQ_COUNT) {
+# if CONFIG_CPU_ARM32M_M_IRQ_COUNT != CONFIG_CPU_ARM32M_M_IRQ_MAPPED_COUNT
+    uint_fast8_t sink_index = pv->sink_mapping[id];
+    if (sink_index >= CONFIG_CPU_ARM32M_M_IRQ_MAPPED_COUNT)
+      return NULL;
+    struct dev_irq_sink_s *sink = pv->sinks + sink_index;
+    assert(sink->icu_pv == id);
+    return sink;
+# else
+    return pv->sinks + id;
+# endif
+  }
   return NULL;
 }
 
@@ -75,18 +93,18 @@ static DEV_IRQ_SINK_UPDATE(arm_icu_sink_update)
 {
   struct device_s *dev = sink->base.dev;
   struct arm_dev_private_s  *pv = dev->drv_pv;
-  uint_fast8_t sink_id = sink - pv->sinks;
+  uint_fast8_t irq_no = sink->icu_pv;
 
   switch (sense)
     {
     case DEV_IRQ_SENSE_NONE:
-      cpu_mem_write_32(ARMV7M_NVIC_ICER_ADDR(sink_id / 32),
-                       ARMV7M_NVIC_ICER_CLRENA(sink_id % 32));
+      cpu_mem_write_32(ARMV7M_NVIC_ICER_ADDR(irq_no / 32),
+                       ARMV7M_NVIC_ICER_CLRENA(irq_no % 32));
       return;
     case DEV_IRQ_SENSE_RISING_EDGE:
     case DEV_IRQ_SENSE_HIGH_LEVEL:
-      cpu_mem_write_32(ARMV7M_NVIC_ISER_ADDR(sink_id / 32),
-                       ARMV7M_NVIC_ISER_SETENA(sink_id % 32));
+      cpu_mem_write_32(ARMV7M_NVIC_ISER_ADDR(irq_no / 32),
+                       ARMV7M_NVIC_ISER_SETENA(irq_no % 32));
     default:
       return;
     }
@@ -288,8 +306,25 @@ static DEV_INIT(arm_init)
 
 #ifdef CONFIG_DEVICE_IRQ
       /* init arm irq sink endpoints */
-      device_irq_sink_init(dev, pv->sinks, CONFIG_CPU_ARM32M_M_IRQ_COUNT,
+      device_irq_sink_init(dev, pv->sinks, CONFIG_CPU_ARM32M_M_IRQ_MAPPED_COUNT,
                            arm_icu_sink_update, DEV_IRQ_SENSE_HIGH_LEVEL | DEV_IRQ_SENSE_RISING_EDGE);
+
+# if CONFIG_CPU_ARM32M_M_IRQ_COUNT != CONFIG_CPU_ARM32M_M_IRQ_MAPPED_COUNT
+    {
+      void *irq_map;
+      error_t err = device_get_param_blob(dev, "irq_map", 0, &irq_map);
+      if (err)
+        return err;
+      pv->sink_mapping = irq_map;
+
+      for (uint_fast8_t irq_no = 0; irq_no < CONFIG_CPU_ARM32M_M_IRQ_COUNT; ++irq_no) {
+        uint_fast8_t sink_index = pv->sink_mapping[irq_no];
+        if (sink_index >= CONFIG_CPU_ARM32M_M_IRQ_MAPPED_COUNT)
+          continue;
+        pv->sinks[sink_index].icu_pv = irq_no;
+      }
+    }
+# endif
 
       /* set processor interrupt handler */
       if (id == CONFIG_ARCH_BOOTSTRAP_CPU_ID)

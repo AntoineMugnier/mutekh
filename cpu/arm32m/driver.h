@@ -43,7 +43,10 @@ DRIVER_PV(struct arm_dev_private_s
 {
 #if defined(CONFIG_DEVICE)
 #ifdef CONFIG_DEVICE_IRQ
-  struct dev_irq_sink_s	sinks[CONFIG_CPU_ARM32M_M_IRQ_COUNT];
+  struct dev_irq_sink_s	sinks[CONFIG_CPU_ARM32M_M_IRQ_MAPPED_COUNT];
+# if CONFIG_CPU_ARM32M_M_IRQ_COUNT != CONFIG_CPU_ARM32M_M_IRQ_MAPPED_COUNT
+  const uint8_t *sink_mapping;
+# endif
 #endif
 
   struct cpu_tree_s node;
