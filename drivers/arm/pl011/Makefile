@@ -1,0 +1,3 @@
+objs-$(CONFIG_DRIVER_ARM_PL011_UART) = uart.o
+objs-$(CONFIG_DRIVER_ARM_PL011_PRINTK) = printk.o
+
