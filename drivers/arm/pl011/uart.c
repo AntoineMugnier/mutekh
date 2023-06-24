@@ -38,6 +38,7 @@
 # include <device/class/valio.h>
 # include <device/valio/uart_config.h>
 #endif
+#include "drivers/arm/identification.h"
 
 #include "pl011.h"
 
@@ -431,6 +432,17 @@ static DEV_INIT(pl011_uart_init)
 
   if (device_res_get_uint(dev, DEV_RES_MEM, 0, &pv->addr, NULL))
     goto err_mem;
+
+  struct arm_identification_s id;
+  arm_identification_read(&id, pv->addr);
+  arm_identification_dump(&id);
+
+  /* DDI0183G Table 3-19 to 3-21 */
+  assert((id.pid0 & 0xfffff) == 0x41011);
+
+  uint16_t pl_code = bit_get_mask(id.pid0, 0, 12);
+  uint8_t rev = bit_get_mask(id.pid0, 20, 4);
+  logk("PL%03x revcode %d", pl_code, rev);
 
 #ifdef CONFIG_DEVICE_IOMUX
   /* setup pinmux */
