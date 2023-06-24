@@ -1,0 +1,66 @@
+@section tP {NXP Flexcomm multi-protocol serial controller}
+
+  @section {Description}
+
+    NXP Flexcomm is a generic IP that may implement SPI, I2C, I2S and
+    USART depending on synthesis-time choice.
+
+    When more than one mode is supported for a given instance, actual
+    mode is selected through a register. This driver only supports one
+    mode at a time for a given instance.
+
+    IP may have input and output data fifos and may be integrated with
+    platform DMA. DMA support in the IP is optional.
+
+    For now, this driver only implements the SPI mode.
+
+  @end section
+
+  @section {Sample instance}
+
+    Here is a sample declaration for a SPI instance.
+
+    @code R
+// Memory map
+#define MYSOC_ADDR_SPI0 ...
+// Interrupt controller map
+#define MYSOC_IRQ_SPI0 ...
+
+DEV_DECLARE_STATIC(mysoc_spi0_dev, "spi0", 0, flexcomm_spi_drv,
+                   DEV_STATIC_RES_MEM(MYSOC_ADDR_SPI0, MYSOC_ADDR_SPI0 + 0x1000),
+
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
+                   DEV_STATIC_RES_IRQ(0, MYSOC_IRQ_SPI0, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
+
+                   DEV_STATIC_RES_CLK_SRC("/clock", MYSOC_CLKSRC_CPU, 0),
+
+                   DEV_STATIC_RES_DEV_IOMUX("/gpio"),
+                   DEV_STATIC_RES_IOMUX("clk",  0, MYSOC_IO_SCLK, MYSOC_IO_ALT_SPI, 0),
+                   DEV_STATIC_RES_IOMUX("miso", 0, MYSOC_IO_SDI,  MYSOC_IO_ALT_SPI, 0),
+                   DEV_STATIC_RES_IOMUX("mosi", 0, MYSOC_IO_SDIO, MYSOC_IO_ALT_SPI, 0),
+
+                   DEV_STATIC_RES_DEV_TIMER("/timer0")
+                   );
+    @end code
+
+    Moreover, a DMA controller may be attached to this device:
+
+    @code R
+// DMA controller request map
+#define MYSOC_DMA_PERIPHERAL_SPI0_RX ...
+#define MYSOC_DMA_PERIPHERAL_SPI0_TX ...
+
+DEV_DECLARE_STATIC(mysoc_spi0_dev, "spi0", 0, flexcomm_spi_drv,
+                   // [...] same as above
+
+                   // DMA controller mapping
+                   DEV_STATIC_RES_DEV_PARAM("dma", "/dma"),
+                   DEV_STATIC_RES_DMA(bit(3), ARM_PL080_LINK(MYSOC_DMA_PERIPHERAL_SPI0_RX, 0)),
+                   DEV_STATIC_RES_DMA(bit(4), ARM_PL080_LINK(MYSOC_DMA_PERIPHERAL_SPI0_TX, 0)),
+                   );
+    @end code
+
+  @end section
+
+@end section
+

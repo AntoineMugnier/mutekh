@@ -1,0 +1,1 @@
+objs-$(CONFIG_DRIVER_NXP_FLEXCOMM_SPI) += spi.o
