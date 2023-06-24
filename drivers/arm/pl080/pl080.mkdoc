@@ -1,0 +1,126 @@
+@section tP {ARM PrimeCell PL080/PL081 DMA controller}
+
+  @section {Description}
+
+    ARM PrimeCell PL080 and PL081 are compatible DMA IPs. They are
+    often found in Mid-range Microcontrollers. They support transfers
+    between memory and registers in an arbitrary manner.
+
+    PL081 is a stripped-down version of PL080 (less channels, less bus
+    masters, etc.).
+
+    They are documented in ARM DDI0196 (PL080) and ARM DDI0218 (PL081).
+
+  @end section
+
+  @section {Limitations against MutekH API}
+
+    MutekH DMA API supports to ask for a data pointer stride different
+    from access width. This DMA controller does not support this.  Such
+    DMA requests will error out with -ENOTSUP.
+
+    @tt cancel and @tt get_status operations are unimplemented.
+
+  @end section
+
+  @section {Platform integration}
+
+    Platform integration should connect dedicated DMA request signals
+    from I/O IPs to the PL080 instance. Numbering of request signal is
+    platform specific and should be reflected in @tt link field of the
+    DMA request. This is most usually given in board definition files.
+
+    Number of channels supported by the IP instance is dynamically
+    retrieved from the driver initialization and internal structures
+    are adapted accordingly.
+
+    PL080 can use I/O IP signals for flow control, or it can use its
+    own counters.  This may be decided on a request basis.  Most
+    often, this is given once and for all with DMA channel assignment.
+    To this extent, there is a @tt ARM_PL080_LINK macro in @tt
+    drivers/arm/pl080.h.
+
+    Internally, PL080 generates two types of interrupts: Errors and
+    Completion. There is a SoC integration choice to either connect
+    two separate interrupts sources to interrupt controller, or have
+    only one that is a OR of both sources.  Driver supports both modes
+    as a compile-time option.  For IRQ binding, use either @tt
+    ARM_PL080_IRQ_DMACINTERR and @tt ARM_PL080_IRQ_DMACINTTC or @tt
+    ARM_PL080_IRQ_DMACINTR defines as interrupt source index.
+
+  @end section
+
+  @section {Sample instances}
+
+    With a single merged IRQ source endpoint:
+
+    @code R
+// Memory map
+#define MYSOC_ADDR_DMAC ...
+// Interrupt controller map
+#define MYSOC_IRQ_DMAC_INTR 42
+
+DEV_DECLARE_STATIC(msyoc_dmac_dev, "mysoc_dmac", 0, arm_pl080_drv,
+                   DEV_STATIC_RES_MEM(MYSOC_ADDR_DMAC, MYSOC_ADDR_DMAC + 0x1000),
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
+                   DEV_STATIC_RES_IRQ(ARM_PL080_IRQ_DMACINTR, MYSOC_IRQ_DMAC_INTR, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
+                   );
+    @end code
+
+    With two IRQ source endpoints:
+
+    @code R
+// Memory map
+#define MYSOC_ADDR_DMAC ...
+// Interrupt controller map
+#define MYSOC_IRQ_DMAC_INTERR ...
+#define MYSOC_IRQ_DMAC_INTTC ...
+
+DEV_DECLARE_STATIC(msyoc_dmac_dev, "mysoc_dmac", 0, arm_pl080_drv,
+                   DEV_STATIC_RES_MEM(MYSOC_ADDR_DMAC, MYSOC_ADDR_DMAC + 0x1000),
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
+                   DEV_STATIC_RES_IRQ(ARM_PL080_IRQ_DMACINTERR, MYSOC_IRQ_DMAC_INTERR, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
+                   DEV_STATIC_RES_IRQ(ARM_PL080_IRQ_DMACINTTC, MYSOC_IRQ_DMAC_INTTC, DEV_IRQ_SENSE_HIGH_LEVEL, 0, 1),
+                   );
+    @end code
+
+    Sample instance for a user component, like with a typical SPI
+    controller.  For master usage, you most probably want byte count
+    to be given in DMA transfer descriptors, so the flow control (in
+    PL080 terms) is DMA-initiated.
+
+    @code R
+// Memory map
+#define MYSOC_ADDR_SPI0 ...
+// Interrupt controller map
+#define MYSOC_IRQ_SPI0 ...
+// DMA controller request map
+#define MYSOC_DMA_PERIPHERAL_SPI0_RX ...
+#define MYSOC_DMA_PERIPHERAL_SPI0_TX ...
+
+DEV_DECLARE_STATIC(mysoc_spi0_dev, "spi0", 0, some_spi_drv,
+                   DEV_STATIC_RES_MEM(MYSOC_ADDR_SPI0, MYSOC_ADDR_SPI0 + 0x1000),
+
+                   // This IP still gets its own interrupt line for general management.
+                   DEV_STATIC_RES_DEV_ICU("/cpu"),
+                   DEV_STATIC_RES_IRQ(0, MYSOC_IRQ_SPI0, DEV_IRQ_SENSE_RISING_EDGE, 0, 1),
+
+                   // Ommitted: clock routing, IO muxing and timer resource declarations.
+                   // ...
+
+                   // DMA mapping, one in each direction for SPI IO.
+                   // Channel order in resources is SPI driver dependent.
+                   DEV_STATIC_RES_DEV_PARAM("dma", "/mysoc_dma"),
+
+                   // RX should have higher priority than TX, hence a lower channel index
+                   // in DMA channel allocation.  Map RX to channel 3 only, TX to channel 4.
+                   DEV_STATIC_RES_DMA(bit(3), ARM_PL080_LINK(MYSOC_DMA_PERIPHERAL_SPI0_RX, 0)),
+                   DEV_STATIC_RES_DMA(bit(4), ARM_PL080_LINK(MYSOC_DMA_PERIPHERAL_SPI0_TX, 0)),
+                   );
+    @end code
+
+
+  @end section
+
+@end section
+

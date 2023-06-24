@@ -1,6 +1,7 @@
 DIR_CFLAGS = -D_HEXO_INTTYPES_DEPRECATED
 
 subdirs = \
+arm \
 char \
 cmu \
 enum \
