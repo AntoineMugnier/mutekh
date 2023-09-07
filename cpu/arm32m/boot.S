@@ -35,6 +35,9 @@ FUNC_START(.text, mutekh_entry)
         str     r4, [r1]
 #endif
 
+        mov  r4, #0x0
+        msr  control, r4
+
 #ifdef CONFIG_CPU_ARM32M_BARE_BOOT
         ldr     r0, = CONFIG_STARTUP_STACK_ADDR + CONFIG_STARTUP_STACK_SIZE
         mov     r13, r0
