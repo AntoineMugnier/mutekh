@@ -3,7 +3,7 @@
 
 /**
    Determines whether the peripheral is providing the flow control (i.e. transfer size).
-   See you SoC's documentation and ARM's PL080 DDI0196G chapter 3.8.
+   See your SoC's documentation and ARM's PL080 DDI0196G chapter 3.8.
  */
 #define ARM_PL080_FLOW 0x10
 #define ARM_PL080_LINK(per, is_flow) ((per) | ((is_flow) ? ARM_PL080_FLOW : 0))
@@ -14,7 +14,8 @@
  * @this is the source IRQ index when mapping the IP IRQ lines.
  *
  * There are two options for integration of PL080. Either with
- * separate error and completion interrupts, or with mixed interrupt.
+ * separate error and completion interrupts, or with mixed
+ * interrupt. See DDI0196G chapter 2.3.5.
  *
  * @see CONFIG_DRIVER_ARM_PL080_IRQ_SEPARATE
  */
