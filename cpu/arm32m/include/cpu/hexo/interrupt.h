@@ -160,10 +160,16 @@ ALWAYS_INLINE void cpu_interrupt_wait(void)
 
         cpu_interrupt_enable();
 	asm volatile (/* wait for event */
+#if 0
+                      "wfi \n\t"
+                      "sev \n\t"
+                      "wfe \n\t"
+#else
                       "wfe \n\t"
                       /* force clear of the event flag */
                       "sev \n\t"
                       "wfe \n\t"
+#endif
                       ::: "memory");
 
 # endif
