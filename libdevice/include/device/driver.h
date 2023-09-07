@@ -54,6 +54,7 @@ enum driver_class_e
   DRIVER_CLASS_TIMER,
   DRIVER_CLASS_PWM,
   DRIVER_CLASS_SPI_CTRL,
+  DRIVER_CLASS_SPI_SLAVE,
   DRIVER_CLASS_LCD,
   /** Clock Management Unit */
   DRIVER_CLASS_CMU,
