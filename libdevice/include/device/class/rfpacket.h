@@ -111,6 +111,9 @@ enum dev_rfpacket_modulation_e
   /** Sigfox modulation
       @see dev_rfpacket_rf_cfg_sigfox_s */
   DEV_RFPACKET_SIGFOX,
+  /** IEEE-Std-802.15.4z UWB HRP
+      @see dev_rfpacket_rf_cfg_uwb_s */
+  DEV_RFPACKET_UWB,
 };
 
 /** This stores RF and modulation configuration. This may be inherited
@@ -226,6 +229,54 @@ struct dev_rfpacket_rf_cfg_lora_s
 
 STRUCT_INHERIT(dev_rfpacket_rf_cfg_lora_s, dev_rfpacket_rf_cfg_s, base);
 
+/**
+   UWB
+ */
+
+/** @This extends the @ref dev_rfpacket_cfg_s object when the @ref
+ * DEV_RFPACKET_UWB modulation is in use.
+ *
+ * For this mode, @tt frequency member in base configuration structure
+ * is not in Hz, but in kHz (or it would overflow).
+ */
+struct dev_rfpacket_rf_cfg_uwb_s
+{
+  struct dev_rfpacket_rf_cfg_s base;
+};
+
+// See IEEE-Std-802.15.4-2020 Table 10-6
+#define DEV_RFPACKET_HRP_UWB_CHANNEL_0  499200
+#define DEV_RFPACKET_HRP_UWB_CHANNEL_1 3494400
+#define DEV_RFPACKET_HRP_UWB_CHANNEL_2 3993600
+#define DEV_RFPACKET_HRP_UWB_CHANNEL_3 4492800
+#define DEV_RFPACKET_HRP_UWB_CHANNEL_4 3933600
+#define DEV_RFPACKET_HRP_UWB_CHANNEL_5 6489600
+#define DEV_RFPACKET_HRP_UWB_CHANNEL_6 6988800
+#define DEV_RFPACKET_HRP_UWB_CHANNEL_7 6489600
+#define DEV_RFPACKET_HRP_UWB_CHANNEL_8 7488000
+#define DEV_RFPACKET_HRP_UWB_CHANNEL_9 7987200
+#define DEV_RFPACKET_HRP_UWB_CHANNEL_10 8486400
+#define DEV_RFPACKET_HRP_UWB_CHANNEL_11 7987200
+#define DEV_RFPACKET_HRP_UWB_CHANNEL_12 8985600
+#define DEV_RFPACKET_HRP_UWB_CHANNEL_13 9484800
+#define DEV_RFPACKET_HRP_UWB_CHANNEL_14 9984000
+#define DEV_RFPACKET_HRP_UWB_CHANNEL_15 9484800
+
+
+// See IEEE-Std-802.15.4z-2020 Table 10-13
+#define DEV_RFPACKET_LRP_UWB_CHANNEL_0 6489600
+#define DEV_RFPACKET_LRP_UWB_CHANNEL_1 6988800
+#define DEV_RFPACKET_LRP_UWB_CHANNEL_2 7987200
+#define DEV_RFPACKET_LRP_UWB_CHANNEL_3 8486400
+#define DEV_RFPACKET_LRP_UWB_CHANNEL_4 6681600
+#define DEV_RFPACKET_LRP_UWB_CHANNEL_5 7334400
+#define DEV_RFPACKET_LRP_UWB_CHANNEL_6 7987200
+#define DEV_RFPACKET_LRP_UWB_CHANNEL_7 8640000
+#define DEV_RFPACKET_LRP_UWB_CHANNEL_8 9292800
+#define DEV_RFPACKET_LRP_UWB_CHANNEL_9 9945600
+
+STRUCT_INHERIT(dev_rfpacket_rf_cfg_uwb_s, dev_rfpacket_rf_cfg_s, base);
+
 /***************************************** packet format config */
 
 ENUM_DESCRIPTOR(dev_rfpacket_format_e, strip:DEV_RFPACKET_, upper);
@@ -251,6 +302,9 @@ enum dev_rfpacket_format_e
   DEV_RFPACKET_FMT_RAW,
 
   DEV_RFPACKET_FMT_SIGFOX,
+
+  /* IEEE-Std-802.15.4z-2020 UWB */
+  DEV_RFPACKET_FMT_UWB,
 };
 
 ENUM_DESCRIPTOR(dev_rfpacket_encoding_e, strip:DEV_RFPACKET_, upper);
@@ -262,6 +316,9 @@ enum dev_rfpacket_encoding_e
   DEV_RFPACKET_LFSR8,
   /* Direct Sequence Spread Spectrum */
   DEV_RFPACKET_DSSS, 
+  /* Convolutional encoding, like in IEEE-Std-802.15.4z-2020 (See 15.3.3) */
+  DEV_RFPACKET_CONVOLUTIONAL_K3,
+  DEV_RFPACKET_CONVOLUTIONAL_K7,
 };
 
 /** This stores packet format configuration. This may be inherited
@@ -376,6 +433,53 @@ struct dev_rfpacket_pk_cfg_lora_s
 };
 
 STRUCT_INHERIT(dev_rfpacket_pk_cfg_lora_s, dev_rfpacket_pk_cfg_s, base);
+
+/**
+   UWB
+ */
+
+/** Packet formats, See 15.2.1 */
+enum dev_rfpacket_uwb_format_e
+{
+  // SYNC, SFD, PHR, Payload
+  DEV_RFPACKET_FMT_UWB_0,
+  // SYNC, SFD, STS, PHR, Payload
+  DEV_RFPACKET_FMT_UWB_1,
+  // SYNC, SFD, PHR, Payload, STS
+  DEV_RFPACKET_FMT_UWB_2,
+  // SYNC, SFD, STS
+  DEV_RFPACKET_FMT_UWB_3,
+};
+
+/** PSDU Bit Rates, See 15.2.7.2 Table 15-9a */
+enum dev_rfpacket_uwb_bit_rate_e
+{
+  /* PHR 975 kb/s (850 kb/s nominal), PSDU 6.8 Mb/s */
+  DEV_RFPACKET_UWB_DRBM_LP,
+  /* PHR 7.8 Mb/s (6.8 Mb/s nominal), PSDU 6.8 Mb/s */
+  DEV_RFPACKET_UWB_DRBM_HP,
+};
+
+struct dev_rfpacket_pk_cfg_uwb_s
+{
+  struct dev_rfpacket_pk_cfg_s      base;
+
+  /** See 15.2.1, Table 15-a */
+  enum dev_rfpacket_uwb_format_e BITFIELD(format,2);
+
+  /** See 15.2.5.1 Table 16-6 and 16-7, 15.2.6, Table 15-7a */
+  uint32_t                   BITFIELD(sync_code,6);
+
+  /** See 15.2.6, Table 15-7c */
+  uint32_t                   BITFIELD(sfd_len,6);
+  uint32_t                   sfd;
+
+  uint8_t sts_master_key[16];
+  uint8_t sts_data[16];
+};
+
+STRUCT_INHERIT(dev_rfpacket_pk_cfg_uwb_s, dev_rfpacket_pk_cfg_s, base);
+
 
 /***************************************** stats */
 
