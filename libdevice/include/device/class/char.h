@@ -261,10 +261,15 @@ ssize_t dev_char_wait_op(const struct device_char_s *accessor,
                          enum dev_char_rq_type_e type, uint8_t *data, size_t size),
 {
   struct dev_char_rq_s rq;
+  error_t err;
+
   rq.type = type;
   rq.data = data;
   rq.size = size;
-  return dev_char_wait_rq(accessor, &rq) ? -1 : size - rq.size;
+
+  err = dev_char_wait_rq(accessor, &rq);
+  assert(err <= 0);
+  return err < 0 ? err : size - rq.size;
 })
 
 #endif
