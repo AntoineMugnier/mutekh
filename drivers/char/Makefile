@@ -8,3 +8,5 @@ subdirs-$(CONFIG_DRIVER_CHAR_PIPE) += pipe
 subdirs-$(CONFIG_DRIVER_HD44780) += hd44780
 subdirs-$(CONFIG_DRIVER_CHAR_USBDEV) += usbdev
 subdirs-$(CONFIG_DRIVER_UART_FORWARDER) += uart_forwarder
+subdirs-$(CONFIG_DRIVER_CHAR_HDLC) += hdlc
+subdirs-$(CONFIG_DRIVER_CHAR_FRAMER) += framer
