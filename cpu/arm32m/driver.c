@@ -93,7 +93,11 @@ static DEV_IRQ_SINK_UPDATE(arm_icu_sink_update)
 {
   struct device_s *dev = sink->base.dev;
   struct arm_dev_private_s  *pv = dev->drv_pv;
+# if CONFIG_CPU_ARM32M_M_IRQ_COUNT != CONFIG_CPU_ARM32M_M_IRQ_MAPPED_COUNT
   uint_fast8_t irq_no = sink->icu_pv;
+# else
+  uint_fast8_t irq_no = sink - pv->sinks;
+# endif
 
   switch (sense)
     {
