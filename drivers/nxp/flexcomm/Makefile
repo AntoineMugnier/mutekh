@@ -1,1 +1,2 @@
-objs-$(CONFIG_DRIVER_NXP_FLEXCOMM_SPI) += spi.o
+objs-$(CONFIG_DRIVER_NXP_FLEXCOMM_SPI_CTRL) += spi_ctrl.o
+objs-$(CONFIG_DRIVER_NXP_FLEXCOMM_SPI_SLAVE) += spi_slave.o

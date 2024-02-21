@@ -326,7 +326,7 @@ void flexcomm_spi_dma_enable(struct flexcomm_spi_pv_s *pv, bool_t enable)
   cfg = flexcomm_ins_val(cfg, CFG, ENABLE, 0);
   flexcomm_set32(pv->base, CFG, cfg);
 
-  uint32_t fifocfg = flexcomm_get32(pv->base, CFG);
+  uint32_t fifocfg = flexcomm_get32(pv->base, FIFOCFG);
   fifocfg = flexcomm_ins_val(fifocfg, FIFOCFG, DMARX, enable);
   fifocfg = flexcomm_ins_val(fifocfg, FIFOCFG, DMATX, enable);
   flexcomm_set32(pv->base, FIFOCFG, fifocfg);
@@ -433,7 +433,7 @@ static DEV_IRQ_SRC_PROCESS(flexcomm_spi_irq)
 
   logk_trace("CFG: %08x", flexcomm_get32(pv->base, CFG));
   logk_trace("STAT: %08x", flexcomm_get32(pv->base, STAT));
-  logk_trace("TXDATCTL: %08x", flexcomm_get32(pv->base, FIFOCFG));
+  logk_trace("TXDATCTL: %08x", flexcomm_get32(pv->base, TXDATCTL));
   logk_trace("FIFOCFG: %08x", flexcomm_get32(pv->base, FIFOCFG));
   logk_trace("FIFOSTAT: %08x", flexcomm_get32(pv->base, FIFOSTAT));
   logk_trace("INTEN: %08x", flexcomm_get32(pv->base, INTENSET));
