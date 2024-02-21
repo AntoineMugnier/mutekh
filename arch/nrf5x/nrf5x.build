@@ -21,6 +21,9 @@
 %section nrf52832-??ab
   %inherit nrf5x-52832-256-32
 
+%section nrf52833-??aa
+  %inherit nrf5x-52833-512-128
+
 %section nrf52820-??ac
   %inherit nrf5x-52820-256-32
 
@@ -157,6 +160,18 @@
     CONFIG_NRF5X_GPIO_COUNT 32
   %end
 
+  %subsection nrf5x-52833-*-*
+    %types family
+    %set BUILD_NAME nrf52833
+
+    CONFIG_NRF5X_MODEL 52833
+    CONFIG_CPU_ARM32M_CORTEXM4
+    CONFIG_CPU_ARM32M_TIMER_SYSTICK
+    CONFIG_CPU_ARM32M_CLOCK undefined
+    CONFIG_CPU_ARM32M_M_IRQ_COUNT 47
+    CONFIG_NRF5X_GPIO_COUNT 42
+  %end
+
   %subsection nrf5x-52840-*-*
     %types family
     %set BUILD_NAME nrf52840
@@ -221,6 +236,12 @@
     %types sram
 
     CONFIG_NRF5X_RAMSIZE 0x10000
+  %end
+
+  %subsection nrf5x-*-*-128
+    %types sram
+
+    CONFIG_NRF5X_RAMSIZE 0x8000
   %end
 
   %subsection nrf5x-*-*-256
