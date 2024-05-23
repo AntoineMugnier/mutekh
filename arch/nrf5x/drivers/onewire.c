@@ -46,16 +46,13 @@ enum ppi_id_e
 {
   PPI_BEGIN_FALL = CONFIG_DRIVER_NRF5X_ONEWIRE_PPI_FIRST,
   PPI_END_RISE,
-  PPI_RISE_CAPTURE,
-  PPI_SLOT_BEGIN_OFF,
-  PPI_SLOT_END_ON,
+  PPI_RISE_CAPTURE
 };
 
 enum gpiote_id_e
 {
   GPIOTE_TX = CONFIG_DRIVER_NRF5X_ONEWIRE_GPIOTE_FIRST,
   GPIOTE_RX,
-  GPIOTE_SUPPLY,
 };
 
 enum timer_chan_e
@@ -131,7 +128,19 @@ static void n1w_request_next(struct nrf5x_1wire_ctx_s *pv, error_t err)
   pv->state = N1W_IDLE;
 
   if (pv->current) {
+    logk("Tx output low only");
+
+    nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_PIN_CNF(pv->io[0]), 0
+                | NRF_GPIO_PIN_CNF_DIR_OUTPUT
+                | NRF_GPIO_PIN_CNF_DRIVE_S0D1);
+
     n1w_next_slot_start(pv);
+  }
+  else {
+    logk("Tx output high only");
+    nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_PIN_CNF(pv->io[0]), 0
+                | NRF_GPIO_PIN_CNF_DIR_OUTPUT
+                | NRF_GPIO_PIN_CNF_DRIVE_D0S1);
   }
 }
 
@@ -166,7 +175,7 @@ static bool_t n1w_reset_collect(struct nrf5x_1wire_ctx_s *pv)
 {
   uint32_t cc = nrf_reg_get(pv->timer_addr, NRF_TIMER_CC(CC_RISE));
 
-  logk_trace("%s %d", __func__, cc);
+  logk("%s %d", __func__, cc);
 
   return cc > T_RST_TH;
 }
@@ -308,6 +317,7 @@ static void n1w_slot_done(struct nrf5x_1wire_ctx_s *pv)
       pv->bit_ptr = 0;
     } else {
       // Presence failure
+      logk_trace("Presence failure");
       return n1w_request_next(pv, -ENOENT);
     }
     break;
@@ -512,10 +522,8 @@ static DEV_INIT(nrf5x_1wire_init)
 #endif
                );
 
-  nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_PIN_CNF(pv->io[0]), 0
-              | NRF_GPIO_PIN_CNF_PULL_UP
-              | NRF_GPIO_PIN_CNF_DIR_OUTPUT
-              | NRF_GPIO_PIN_CNF_DRIVE_S0D1);
+  nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_PIN_CNF(pv->io[1]), 0
+              | NRF_GPIO_PIN_CNF_DIR_INPUT);
 
   nrf_short_set(pv->timer_addr, 0
                 | bit(NRF_TIMER_COMPARE_STOP(CC_SLOT))
@@ -528,7 +536,7 @@ static DEV_INIT(nrf5x_1wire_init)
               | NRF_GPIOTE_CONFIG_POLARITY_TOGGLE);
   nrf_reg_set(GPIOTE_ADDR, NRF_GPIOTE_CONFIG(GPIOTE_RX), 0
               | NRF_GPIOTE_CONFIG_MODE_EVENT
-              | NRF_GPIOTE_CONFIG_PSEL(pv->io[0])
+              | NRF_GPIOTE_CONFIG_PSEL(pv->io[1])
               | NRF_GPIOTE_CONFIG_POLARITY_LOTOHI);
 
   nrf_ppi_setup(PPI_BEGIN_FALL,
@@ -547,29 +555,7 @@ static DEV_INIT(nrf5x_1wire_init)
                       | bit(PPI_RISE_CAPTURE)
                       );
 
-  if (pv->io[1] != IOMUX_INVALID_ID) {
-    nrf_reg_set(GPIOTE_ADDR, NRF_GPIOTE_CONFIG(GPIOTE_SUPPLY), 0
-                | NRF_GPIOTE_CONFIG_MODE_TASK
-                | NRF_GPIOTE_CONFIG_OUTINIT_HIGH
-                | NRF_GPIOTE_CONFIG_PSEL(pv->io[1])
-                | NRF_GPIOTE_CONFIG_POLARITY_TOGGLE);
-    nrf_ppi_setup(PPI_SLOT_BEGIN_OFF,
-                  pv->timer_addr, NRF_TIMER_COMPARE(CC_BEGIN),
-                  GPIOTE_ADDR, NRF_GPIOTE_OUT(GPIOTE_SUPPLY));
-    nrf_ppi_setup(PPI_SLOT_END_ON,
-                  pv->timer_addr, NRF_TIMER_COMPARE(CC_SLOT),
-                  GPIOTE_ADDR, NRF_GPIOTE_OUT(GPIOTE_SUPPLY));
 
-    nrf_ppi_enable_mask(0
-                        | bit(PPI_SLOT_BEGIN_OFF)
-                        | bit(PPI_SLOT_END_ON)
-                        );
-
-    nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_PIN_CNF(pv->io[1]), 0
-                //| NRF_GPIO_PIN_CNF_PULL_UP
-                | NRF_GPIO_PIN_CNF_DIR_OUTPUT
-                | NRF_GPIO_PIN_CNF_DRIVE_D0S1);
-  }
 
   nrf_it_enable(pv->timer_addr, NRF_TIMER_COMPARE(CC_SLOT));
 

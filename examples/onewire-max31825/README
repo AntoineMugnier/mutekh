@@ -1,0 +1,3 @@
+Example developed on an NRF52811 for piloting two MAX31825 indivudally on a OneWire bus.
+Both MAX31825 are powered through the OneWire Bus.
+Each MAX31825 is identified by its adress. An address is defined by the resistor connected to the address pin ADD0. 
