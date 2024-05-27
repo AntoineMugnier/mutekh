@@ -67,9 +67,7 @@ struct max31825_context_s
 
   //Dynamic parameters
   uintptr_t init_charging_time_us;
-  uint16_t nb_devices_on_bus;
-  const uintptr_t* device_address_array;
-
+  uintptr_t device_address;
   uint8_t tx_data[10];
   uint8_t rx_data[10];
 
@@ -150,7 +148,7 @@ void start_read_scratchpad(struct max31825_context_s *pv){
 
   pv->transfer[0].direction = DEV_ONEWIRE_WRITE;
   pv->tx_data[0] = SELECT_ADRESS_CMD;
-  pv->tx_data[1] = pv->device_address_array[0];
+  pv->tx_data[1] = pv->device_address;
   pv->tx_data[2] = READ_SCRATCHPAD_CMD;
   pv->transfer[0].data = pv->tx_data;
   pv->transfer[0].size = 3;
@@ -195,7 +193,7 @@ static void start_temperature_request(struct max31825_context_s *pv)
 
   pv->transfer[0].direction = DEV_ONEWIRE_WRITE;
   pv->tx_data[0] = SELECT_ADRESS_CMD;
-  pv->tx_data[1] = pv->device_address_array[0];
+  pv->tx_data[1] = pv->device_address;
   pv->tx_data[2] = CONVERT_T_CMD;
   pv->transfer[0].data = pv->tx_data;
   pv->transfer[0].size = 3;
@@ -316,7 +314,7 @@ static DEV_INIT(max31825_init)
     return err;
   }
 
-  err = device_get_param_uint_array(dev, "device_address_array", &pv->nb_devices_on_bus, &pv->device_address_array);
+  err = device_get_param_uint(dev, "device_address", &pv->device_address);
   if(err){
     return err;
   }
