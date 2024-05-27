@@ -45,7 +45,9 @@ enum max31825_state_e
 {
   MAX31825_INITIALIZING,
   MAX31825_IDLE,
-  MAX31825_READING
+  MAX31825_CONVERTING_TEMP,
+  MAX31825_READING_TEMP,
+
 };
 
 #define SELECT_ADRESS_CMD 0x70
@@ -129,6 +131,7 @@ static KROUTINE_EXEC(scratchpad_read_done)
   dev_valio_rq_done(pv->current_user_rq);
   
   //TODO Spin lock here ?
+  pv->state = MAX31825_IDLE;
   process_next_request(pv);
 
 }
@@ -136,6 +139,7 @@ static KROUTINE_EXEC(scratchpad_read_done)
 void start_read_scratchpad(struct max31825_context_s *pv){
 
   logk("Starting scratchpad read");
+  pv->state = MAX31825_READING_TEMP;
 
   dev_onewire_rq_init(&pv->onewire_rq, scratchpad_read_done);
 
@@ -180,6 +184,7 @@ static void start_temperature_request(struct max31825_context_s *pv)
 {
 
   logk("Starting temperature request");
+  pv->state = MAX31825_CONVERTING_TEMP;
 
   dev_onewire_rq_init(&pv->onewire_rq, performing_conversion);
 
@@ -218,7 +223,7 @@ DEV_VALIO_REQUEST(max31825_request)
     dev_valio_rq_pushback(&pv->queue, rq);
 
     if (pv->state == MAX31825_IDLE){
-      process_next_request(pv);
+      process_next_request(pv);  
     }
     LOCK_RELEASE_IRQ(&dev->lock);
 
