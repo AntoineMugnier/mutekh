@@ -96,13 +96,6 @@ void process_next_request(struct max31825_context_s *pv){
   
 }
 
-void convert_temp(int16_t raw_temp){
-  logk(" RAW VALUE IS %d", raw_temp);
-  logk(" TEMPERATURE VALUE IS  %d.%04d ",
-   raw_temp / 16, 625 * ((raw_temp < 0 ? 0x10 - (raw_temp & 0xf) : (raw_temp & 0xf))));
-
-}
-
 void print_sp(uint8_t rx_data[]){
   logk("Scratchpad is:");
   logk("Temperature LSB %x", rx_data[0]);
@@ -115,8 +108,13 @@ void print_sp(uint8_t rx_data[]){
   logk("TL MSB  %x", rx_data[7]);
   logk("CRC %x", rx_data[8]);
   logk("adress  %x", rx_data[2] & 0x3f );
-  uint16_t raw_temp = (rx_data[1] << 8) | rx_data[0];
-  convert_temp(raw_temp);
+}
+
+void convert_temp(int16_t raw_temp){
+  logk(" RAW VALUE IS %d", raw_temp);
+  logk(" TEMPERATURE VALUE IS  %d.%04d ",
+   raw_temp / 16, 625 * ((raw_temp < 0 ? 0x10 - (raw_temp & 0xf) : (raw_temp & 0xf))));
+
 }
 
 static KROUTINE_EXEC(scratchpad_read_done)
@@ -126,10 +124,24 @@ static KROUTINE_EXEC(scratchpad_read_done)
 
   print_sp(pv->rx_data);
 
-  dev_valio_rq_done(pv->current_user_rq);
   
   //TODO Spin lock here ?
   pv->state = MAX31825_IDLE;
+
+  int16_t raw_temp = ((pv->rx_data[1] << 8) | pv->rx_data[0]);
+
+
+  uint32_t temp_milikelvin = (raw_temp*625)/10 + 273150;
+  struct valio_temperature_s* rq_data = (struct valio_temperature_s*) pv->current_user_rq->data;
+  
+  logk(" Temperature read is :  %d.%04d C or %d mK",
+  raw_temp / 16, 625 * ((raw_temp < 0 ? 0x10 - (raw_temp & 0xf) : (raw_temp & 0xf))), temp_milikelvin);
+
+
+  rq_data->temperature = temp_milikelvin;
+
+  dev_valio_rq_done(pv->current_user_rq);
+
   process_next_request(pv);
 
 }
@@ -203,6 +215,7 @@ static void start_temperature_request(struct max31825_context_s *pv)
 
 
 void handle_request(struct max31825_context_s *pv){
+
 
   start_temperature_request(pv);
 }

@@ -15,7 +15,7 @@ struct app_s
 {
   struct device_valio_s max31825_r_bus;
   struct dev_valio_rq_s max31825_r_rq;
-  struct valio_temperature_s temp_r_val_celsius[2];
+  struct valio_temperature_s temp_r_u1_val_kelvin;
 };
 
 STRUCT_COMPOSE(app_s, max31825_r_rq);
@@ -26,8 +26,7 @@ KROUTINE_EXEC(app_temp_changed)
   struct dev_valio_rq_s *rq = dev_valio_rq_from_kr(kr);
   struct app_s *app = app_s_from_max31825_r_rq(rq);
 
-  //logk("Temperature now %d.%03d C", app->temp_r_val_celsius[0], app->temp_r_val_celsius[1]);
-  logk("Temp done ");
+  logk("Temperature now %d K", app->temp_r_u1_val_kelvin);
 
   DEVICE_OP(&app->max31825_r_bus, request, &app->max31825_r_rq);
 }
@@ -46,10 +45,10 @@ void app_start(void)
   ensure(!err && "Error getting MAX31825 sensors device");
 
   dev_valio_rq_init(&app->max31825_r_rq, app_temp_changed);
-  app->max31825_r_rq.data = app->temp_r_val_celsius;
+  app->max31825_r_rq.data = &app->temp_r_u1_val_kelvin;
   app->max31825_r_rq.type = DEVICE_VALIO_READ;
   app->max31825_r_rq.attribute = VALIO_TEMPERATURE_VALUE;
-
+  
   DEVICE_OP(&app->max31825_r_bus, request, &app->max31825_r_rq);
 
 }
