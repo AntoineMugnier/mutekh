@@ -248,7 +248,7 @@ error_t dev_onewire_wait_write(
 
 #ifdef CONFIG_DEVICE_ONEWIRE
 # define DEV_STATIC_RES_DEV_ONEWIRE(path_)                          \
-  DEV_STATIC_RES_DEVCLASS_PARAM("1wire", path_, DRIVER_CLASS_ONEWIRE)
+  DEV_STATIC_RES_DEVCLASS_PARAM("onewire", path_, DRIVER_CLASS_ONEWIRE)
 #else
 # define DEV_STATIC_RES_DEV_ONEWIRE(path_) { .type = DEV_RES_UNUSED, }
 #endif

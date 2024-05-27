@@ -555,8 +555,6 @@ static DEV_INIT(nrf5x_1wire_init)
                       | bit(PPI_RISE_CAPTURE)
                       );
 
-
-
   nrf_it_enable(pv->timer_addr, NRF_TIMER_COMPARE(CC_SLOT));
 
   return 0;

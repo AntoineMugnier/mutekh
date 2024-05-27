@@ -16,6 +16,7 @@ CONFIG_MUTEK_PRINTK_COMPILE_EXPR level >= LOGK_LEVEL_NORMAL || id == 'n1ws'
 %inherit ellisys-mwp1-probe_interposer_a
 %include ellisys/ellisys.build
 
+CONFIG_DRIVER_MAX31825
 CONFIG_DRIVER_NRF5X_TIMER
 CONFIG_DRIVER_NRF5X_RTC
 CONFIG_DEVICE_TIMER
