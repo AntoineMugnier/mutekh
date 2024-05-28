@@ -19,6 +19,7 @@
 */
 
 #include <stdint.h>
+#include <string.h>
 #define LOGK_MODULE_ID "3182"
 
 #include <hexo/types.h>
@@ -46,7 +47,7 @@ enum max31825_state_e
   MAX31825_INITIALIZING,
   MAX31825_IDLE,
   MAX31825_CONVERTING_TEMP,
-  MAX31825_READING_TEMP,
+  MAX31825_READING_TEMP
 
 };
 
@@ -96,6 +97,7 @@ void process_next_request(struct max31825_context_s *pv){
   
 }
 
+// For debug
 void print_sp(uint8_t rx_data[]){
   logk("Scratchpad is:");
   logk("Temperature LSB %x", rx_data[0]);
@@ -107,43 +109,91 @@ void print_sp(uint8_t rx_data[]){
   logk("TL LSB %x", rx_data[6]);
   logk("TL MSB  %x", rx_data[7]);
   logk("CRC %x", rx_data[8]);
-  logk("adress  %x", rx_data[2] & 0x3f );
+  logk("address  %x", rx_data[2] & 0x3f );
 }
 
-void convert_temp(int16_t raw_temp){
-  logk(" RAW VALUE IS %d", raw_temp);
-  logk(" TEMPERATURE VALUE IS  %d.%04d ",
-   raw_temp / 16, 625 * ((raw_temp < 0 ? 0x10 - (raw_temp & 0xf) : (raw_temp & 0xf))));
 
+
+uint8_t uint8_reverse(uint8_t val)
+{
+    uint8_t ret = 0;
+    for (size_t i = 0; i < 8; i++)
+    {
+        if (val & 0x80)
+        {
+            ret |= (1 << i);
+        }
+        val <<= 1;
+    }
+    return ret;
 }
+
+uint8_t calculate_crc8_maxim(uint8_t const * data, size_t data_size, uint8_t poly)
+{
+    uint8_t crc = 0;
+    for (size_t i = 0; i < data_size; i++)
+    {
+        crc = crc ^ uint8_reverse(data[i]);
+        for (size_t j = 0; j < 8; j++)
+        {
+            if (crc & 0x80)
+            {
+                crc = (crc << 1) ^ poly;
+            }
+            else
+            {
+                crc <<= 1;
+            }
+        }
+    }
+    return uint8_reverse(crc);
+}
+
 
 static KROUTINE_EXEC(scratchpad_read_done)
 {
   struct dev_onewire_rq_s *rq = dev_onewire_rq_from_kr(kr);
   struct max31825_context_s *pv = max31825_context_s_from_onewire_rq(rq);
 
-  print_sp(pv->rx_data);
-
+  print_sp(pv->rx_data); //TODO logk_trace
   
-  //TODO Spin lock here ?
-  pv->state = MAX31825_IDLE;
+  // Check that device address matches to requested
+  uint8_t inspected_device_adress = pv->rx_data[2] & 0x3f;
+  if(inspected_device_adress != pv->device_address){
+    logk_error("Device address targeted : %x, got: %x",pv->device_address, inspected_device_adress);
+    pv->current_user_rq->error = -EIO;
+  }
 
-  int16_t raw_temp = ((pv->rx_data[1] << 8) | pv->rx_data[0]);
+  // Check data integrity by comparing device and calculated CRCs
+  uint8_t device_crc = pv->rx_data[8];
+  // Polynomial is "X8 + X5 + X4 + 1"
+  uint8_t calculated_crc = calculate_crc8_maxim(pv->rx_data, 8, 0x31);
+  if(device_crc != calculated_crc){
+      logk_error("Wrong MAX31825 scratchpad CRC, calculated : %x, in device ROM: %x",calculated_crc, device_crc);
+      pv->current_user_rq->error = -EIO;
+  }
 
 
-  uint32_t temp_milikelvin = (raw_temp*625)/10 + 273150;
-  struct valio_temperature_s* rq_data = (struct valio_temperature_s*) pv->current_user_rq->data;
-  
-  logk(" Temperature read is :  %d.%04d C or %d mK",
-  raw_temp / 16, 625 * ((raw_temp < 0 ? 0x10 - (raw_temp & 0xf) : (raw_temp & 0xf))), temp_milikelvin);
+  // Process data if no error is present
+  if(!pv->current_user_rq->error){
 
+    int16_t raw_temp = ((pv->rx_data[1] << 8) | pv->rx_data[0]);
 
-  rq_data->temperature = temp_milikelvin;
+    uint32_t temp_milikelvin = (raw_temp*625)/10 + 273150;
+    struct valio_temperature_s* rq_data = (struct valio_temperature_s*) pv->current_user_rq->data;
+    
+    logk(" Temperature read is :  %d.%04d C or %d mK",
+    raw_temp / 16, 625 * ((raw_temp < 0 ? 0x10 - (raw_temp & 0xf) : (raw_temp & 0xf))), temp_milikelvin);
+
+    rq_data->temperature = temp_milikelvin;
+  }
 
   dev_valio_rq_done(pv->current_user_rq);
 
-  process_next_request(pv);
+  pv->state = MAX31825_IDLE;
 
+  //TODO Spin lock here ?
+  process_next_request(pv);
 }
 
 void start_read_scratchpad(struct max31825_context_s *pv){
@@ -185,7 +235,7 @@ static KROUTINE_EXEC(performing_conversion)
   struct max31825_context_s *pv = max31825_context_s_from_onewire_rq(rq);
 
   dev_timer_rq_init(&pv->timer_rq, conversion_done);
-  dev_timer_init_sec(&pv->timer, &pv->timer_rq.delay, 0, 2, 1);
+  dev_timer_init_sec(&pv->timer, &pv->timer_rq.delay, 0, 2, 1); // TODO ADJUST
   DEVICE_OP(&pv->timer, request, &pv->timer_rq);
 
 }
@@ -216,8 +266,8 @@ static void start_temperature_request(struct max31825_context_s *pv)
 
 void handle_request(struct max31825_context_s *pv){
 
-
-  start_temperature_request(pv);
+    // Only one possible request available
+    start_temperature_request(pv);
 }
 
 static
