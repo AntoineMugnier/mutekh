@@ -23,10 +23,6 @@
 #define LOGK_MODULE_ID "3182"
 
 #include <hexo/types.h>
-#include <hexo/endian.h>
-#include <hexo/iospace.h>
-#include <hexo/interrupt.h>
-#include <hexo/bit.h>
 
 #include <mutek/mem_alloc.h>
 #include <mutek/printk.h>
@@ -37,7 +33,6 @@
 
 #include <device/class/valio.h>
 #include <device/valio/temperature.h>
-#include <device/class/spi.h>
 #include <device/class/timer.h>
 #include <device/class/onewire.h>
 #include <device/class/gpio.h>
@@ -51,6 +46,7 @@ enum max31825_state_e
 
 };
 
+// Chip function commands
 #define SELECT_ADRESS_CMD 0x70
 #define DETECT_ADRESS_CMD 0x88
 #define READ_SCRATCHPAD_CMD 0xBE
@@ -59,6 +55,7 @@ enum max31825_state_e
 struct max31825_context_s
 {
   struct device_gpio_s pull_up_gpio;
+  gpio_id_t pull_up_gpio_id;
   struct device_onewire_s onewire;
   struct dev_onewire_rq_s onewire_rq;
   struct device_timer_s timer;
@@ -66,19 +63,17 @@ struct max31825_context_s
   struct dev_onewire_transfer_s transfer[2];
   struct dev_valio_rq_s * current_user_rq;
 
-  //Dynamic parameters
+  // Parameters collected from device tree
   uintptr_t init_charging_time_us;
   uintptr_t device_address;
+
+  // Buffer used for commucation with the chip
   uint8_t tx_data[10];
   uint8_t rx_data[10];
 
   dev_request_queue_root_t queue;
 
   enum max31825_state_e state;
-  
-  int32_t temp;
-
-  gpio_id_t pull_up_gpio_id;
 };
 
 STRUCT_COMPOSE(max31825_context_s, onewire_rq);
@@ -86,9 +81,10 @@ STRUCT_COMPOSE(max31825_context_s, timer_rq);
 
 DRIVER_PV(struct max31825_context_s);
 
-void handle_request(struct max31825_context_s *pv);
+static void handle_request(struct max31825_context_s *pv);
 
-void process_next_request(struct max31825_context_s *pv){
+
+static void process_next_request(struct max31825_context_s *pv){
   pv->current_user_rq = dev_valio_rq_pop(&pv->queue);
 
   if(pv->current_user_rq){
@@ -98,7 +94,7 @@ void process_next_request(struct max31825_context_s *pv){
 }
 
 // For debug
-void print_sp(uint8_t rx_data[]){
+static void print_sp(uint8_t rx_data[]){
   logk("Scratchpad is:");
   logk("Temperature LSB %x", rx_data[0]);
   logk("Temperature MSB %x", rx_data[1]);
@@ -114,7 +110,7 @@ void print_sp(uint8_t rx_data[]){
 
 
 
-uint8_t uint8_reverse(uint8_t val)
+static uint8_t uint8_reverse(uint8_t val)
 {
     uint8_t ret = 0;
     for (size_t i = 0; i < 8; i++)
@@ -128,7 +124,8 @@ uint8_t uint8_reverse(uint8_t val)
     return ret;
 }
 
-uint8_t calculate_crc8_maxim(uint8_t const * data, size_t data_size, uint8_t poly)
+// Special checksum calculation reversing input data and output CRC result
+static uint8_t calculate_crc8_maxim(uint8_t const * data, size_t data_size, uint8_t poly)
 {
     uint8_t crc = 0;
     for (size_t i = 0; i < data_size; i++)
@@ -196,7 +193,7 @@ static KROUTINE_EXEC(scratchpad_read_done)
   process_next_request(pv);
 }
 
-void start_read_scratchpad(struct max31825_context_s *pv){
+static void start_read_scratchpad(struct max31825_context_s *pv){
 
   logk("Starting scratchpad read");
   pv->state = MAX31825_READING_TEMP;
@@ -214,10 +211,10 @@ void start_read_scratchpad(struct max31825_context_s *pv){
   pv->tx_data[2] = READ_SCRATCHPAD_CMD;
   pv->transfer[0].data = pv->tx_data;
   pv->transfer[0].size = 3;
-  memset(pv->rx_data, 0, 9);
   pv->transfer[1].direction = DEV_ONEWIRE_READ;
   pv->transfer[1].data = pv->rx_data;
   pv->transfer[1].size = 9;
+  memset(pv->rx_data, 0, pv->transfer[1].size);
 
   DEVICE_OP(&pv->onewire, request, &pv->onewire_rq);
 }
@@ -264,7 +261,7 @@ static void start_temperature_request(struct max31825_context_s *pv)
 }
 
 
-void handle_request(struct max31825_context_s *pv){
+static void handle_request(struct max31825_context_s *pv){
 
     // Only one possible request available
     start_temperature_request(pv);
@@ -287,8 +284,6 @@ DEV_VALIO_REQUEST(max31825_request)
       process_next_request(pv);  
     }
     LOCK_RELEASE_IRQ(&dev->lock);
-
-
   }
   else{
         rq->error = -ENOTSUP;
@@ -299,7 +294,7 @@ DEV_VALIO_REQUEST(max31825_request)
 static
 DEV_VALIO_CANCEL(max31825_cancel)
 {
-
+  //TODO Implement
 }
 
 #define max31825_use dev_use_generic
@@ -313,7 +308,6 @@ static KROUTINE_EXEC(detect_adress_done)
 }
 
 
-
 static
 KROUTINE_EXEC(device_power_on)
 {
@@ -321,7 +315,9 @@ KROUTINE_EXEC(device_power_on)
   struct max31825_context_s *pv = max31825_context_s_from_timer_rq(rq);
   
   logk_trace("Starting enumeration");
-
+  
+  // Request all MAX31825 devices on the bus to measure the adress defined by
+  // the resistance value on their ADD0 pin 
   dev_onewire_rq_init(&pv->onewire_rq, detect_adress_done);
 
   pv->onewire_rq.data.transfer = pv->transfer;
@@ -336,7 +332,6 @@ KROUTINE_EXEC(device_power_on)
   pv->transfer[0].size = 1;
 
   DEVICE_OP(&pv->onewire, request, &pv->onewire_rq);
-
 }
 
 static DEV_INIT(max31825_init)
@@ -362,7 +357,7 @@ static DEV_INIT(max31825_init)
   if(err){
     return err;
   }
-  gpio_width_t width;
+  gpio_width_t width; // dummy parameter
   err = device_gpio_get_setup(&pv->pull_up_gpio, dev, "pull_up", &pv->pull_up_gpio_id, &width);
   if(err){
     return err;
@@ -384,6 +379,7 @@ static DEV_INIT(max31825_init)
 
   dev_rq_queue_init(&pv->queue);
 
+  // Maintain Pull-up all the time on onewire line
   DEVICE_OP(&pv->pull_up_gpio, set_mode, pv->pull_up_gpio_id, pv->pull_up_gpio_id, dev_gpio_mask1, DEV_PIN_PUSHPULL);
   DEVICE_OP(&pv->pull_up_gpio, set_output, pv->pull_up_gpio_id, pv->pull_up_gpio_id, dev_gpio_mask1, dev_gpio_mask1);
 
@@ -397,7 +393,7 @@ static DEV_INIT(max31825_init)
 
 static DEV_CLEANUP(max31825_cleanup)
 {
-
+  //TODO Implement
   return 0;
 }
 
