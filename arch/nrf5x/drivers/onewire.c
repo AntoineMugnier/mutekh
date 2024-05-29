@@ -18,6 +18,7 @@
     Copyright (c) 2021, Nicolas Pouillon, <nipo@ssji.net>
 */
 
+#include <stdint.h>
 #define LOGK_MODULE_ID "n1ws"
 
 #include <hexo/types.h>
@@ -97,10 +98,12 @@ struct nrf5x_1wire_ctx_s
   dev_request_queue_root_t queue;
   struct dev_onewire_rq_s *current;
 
+  uint32_t bitbang_delay;
   uint8_t buffer;
   uint8_t bit_ptr;
   size_t byte_index;
   size_t transfer_index;
+  
 };
 
 DRIVER_PV(struct nrf5x_1wire_ctx_s);
@@ -160,10 +163,10 @@ static void n1w_reset_start(struct nrf5x_1wire_ctx_s *pv)
 {
   logk_trace("%s", __func__);
 
-  nrf_reg_set(pv->timer_addr, NRF_TIMER_CC(CC_BEGIN), T_BEGIN);
-  nrf_reg_set(pv->timer_addr, NRF_TIMER_CC(CC_END), T_RST_RISE);
+  nrf_reg_set(pv->timer_addr, NRF_TIMER_CC(CC_BEGIN), pv->bitbang_delay + T_BEGIN);
+  nrf_reg_set(pv->timer_addr, NRF_TIMER_CC(CC_END), pv->bitbang_delay + T_RST_RISE);
   nrf_reg_set(pv->timer_addr, NRF_TIMER_CC(CC_RISE), 0);
-  nrf_reg_set(pv->timer_addr, NRF_TIMER_CC(CC_SLOT), T_RST_SLOT);
+  nrf_reg_set(pv->timer_addr, NRF_TIMER_CC(CC_SLOT), pv->bitbang_delay + T_RST_SLOT);
   
   nrf_task_trigger(pv->timer_addr, NRF_TIMER_CLEAR);
   nrf_task_trigger(pv->timer_addr, NRF_TIMER_START);
@@ -177,17 +180,17 @@ static bool_t n1w_reset_collect(struct nrf5x_1wire_ctx_s *pv)
 
   logk("%s %d", __func__, cc);
 
-  return cc > T_RST_TH;
+  return cc > pv->bitbang_delay + T_RST_TH;
 }
 
 static void n1w_bit_tx_start(struct nrf5x_1wire_ctx_s *pv, bool_t value)
 {
   logk_trace("%s %d", __func__, value);
 
-  nrf_reg_set(pv->timer_addr, NRF_TIMER_CC(CC_BEGIN), T_BEGIN);
-  nrf_reg_set(pv->timer_addr, NRF_TIMER_CC(CC_END), value ? T_B1_RISE : T_B0_RISE);
+  nrf_reg_set(pv->timer_addr, NRF_TIMER_CC(CC_BEGIN), pv->bitbang_delay + T_BEGIN);
+  nrf_reg_set(pv->timer_addr, NRF_TIMER_CC(CC_END), value ? pv->bitbang_delay + T_B1_RISE : pv->bitbang_delay + T_B0_RISE);
   nrf_reg_set(pv->timer_addr, NRF_TIMER_CC(CC_RISE), 0);
-  nrf_reg_set(pv->timer_addr, NRF_TIMER_CC(CC_SLOT), T_BIT_SLOT);
+  nrf_reg_set(pv->timer_addr, NRF_TIMER_CC(CC_SLOT), pv->bitbang_delay + T_BIT_SLOT);
   
   nrf_task_trigger(pv->timer_addr, NRF_TIMER_CLEAR);
   nrf_task_trigger(pv->timer_addr, NRF_TIMER_START);
@@ -206,7 +209,7 @@ static bool_t n1w_bit_rx_collect(struct nrf5x_1wire_ctx_s *pv)
 
   logk_trace("%s %d", __func__, cc);
 
-  return cc < T_BIT_TH;
+  return cc < pv->bitbang_delay + T_BIT_TH;
 }
 
 static void n1w_next_slot_start(struct nrf5x_1wire_ctx_s *pv)
@@ -495,11 +498,21 @@ static DEV_INIT(nrf5x_1wire_init)
   memset(pv, 0, sizeof(*pv));
   pv->timer_addr = addr;
   dev->drv_pv = pv;
-
   err = device_iomux_setup(dev, ",dq ^dqpw?", NULL, pv->io, NULL);
   if (err)
     goto err_gpio;
 
+
+  // Setting maximum frequency of the onewire bus, note that this frequency is theoretical and may be hard to reach
+  // due to other CPU tasks running in parallel of the onewire communication
+  uint32_t bus_max_frequency_hz;
+  err = device_get_param_uint(dev, "bus_max_frequency_hz", &bus_max_frequency_hz);
+  if(err){
+    return err;
+  }
+  int possible_bitbang_delay = (1000000/bus_max_frequency_hz) - T_RST_SLOT;
+  pv->bitbang_delay = possible_bitbang_delay >0 ? possible_bitbang_delay : 0;
+  
   device_irq_source_init(dev, &pv->irq_ep, 1, &nrf5x_1wire_irq);
   if (device_irq_source_link(dev, &pv->irq_ep, 1, -1))
     goto err_gpio;
