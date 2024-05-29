@@ -85,6 +85,7 @@ enum nrf5x_1wire_state_e
   N1W_ROM_BIT_SEL,
   N1W_DATA_WRITE,
   N1W_DATA_READ,
+  N1W_WAITING
 };
 
 struct nrf5x_1wire_ctx_s
@@ -131,16 +132,12 @@ static void n1w_request_next(struct nrf5x_1wire_ctx_s *pv, error_t err)
   pv->state = N1W_IDLE;
 
   if (pv->current) {
-    logk("Tx output low only");
-
-    nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_PIN_CNF(pv->io[0]), 0
-                | NRF_GPIO_PIN_CNF_DIR_OUTPUT
-                | NRF_GPIO_PIN_CNF_DRIVE_S0D1);
-
     n1w_next_slot_start(pv);
   }
   else {
     logk("Tx output high only");
+    // High output enabled to power on strongly the bus when not performing 
+    //communication with onewire slave
     nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_PIN_CNF(pv->io[0]), 0
                 | NRF_GPIO_PIN_CNF_DIR_OUTPUT
                 | NRF_GPIO_PIN_CNF_DRIVE_D0S1);
@@ -162,6 +159,13 @@ static void dump(struct nrf5x_1wire_ctx_s *pv)
 static void n1w_reset_start(struct nrf5x_1wire_ctx_s *pv)
 {
   logk_trace("%s", __func__);
+
+  logk("Tx output low only");
+  // High output is disabled for master data line so the onewire slave can drive it high 
+  // to signal ever a 1 or 0
+  nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_PIN_CNF(pv->io[0]), 0
+              | NRF_GPIO_PIN_CNF_DIR_OUTPUT
+              | NRF_GPIO_PIN_CNF_DRIVE_S0D1);
 
   nrf_reg_set(pv->timer_addr, NRF_TIMER_CC(CC_BEGIN), pv->bitbang_delay + T_BEGIN);
   nrf_reg_set(pv->timer_addr, NRF_TIMER_CC(CC_END), pv->bitbang_delay + T_RST_RISE);
