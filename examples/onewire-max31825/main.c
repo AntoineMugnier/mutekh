@@ -41,14 +41,27 @@ void app_start(void)
   
   logk("1-Wire test");
   
+  struct device_gpio_s gpio;
+  gpio_id_t pull_up_gpio_id = 13;
+
   err = device_get_accessor_by_path(&app->max31825_r_bus.base, NULL, "max31825_r_u1", DRIVER_CLASS_VALIO);
   ensure(!err && "Error getting MAX31825 sensors device");
+
+  err = device_get_accessor_by_path(&gpio.base, NULL, "gpio", DRIVER_CLASS_GPIO);
+    ensure(!err && "Error getting GPIO device");
+
+  // Maintain Pull-up all the time on onewire line
+  DEVICE_OP(&gpio, set_mode, pull_up_gpio_id, pull_up_gpio_id, dev_gpio_mask1, DEV_PIN_PUSHPULL);
+  DEVICE_OP(&gpio, set_output, pull_up_gpio_id, pull_up_gpio_id, dev_gpio_mask1, dev_gpio_mask1);
+
 
   dev_valio_rq_init(&app->max31825_r_rq, app_temp_changed);
   app->max31825_r_rq.data = &app->temp_r_u1_val_kelvin;
   app->max31825_r_rq.type = DEVICE_VALIO_READ;
   app->max31825_r_rq.attribute = VALIO_TEMPERATURE_VALUE;
   
+
+
   DEVICE_OP(&app->max31825_r_bus, request, &app->max31825_r_rq);
 
 }

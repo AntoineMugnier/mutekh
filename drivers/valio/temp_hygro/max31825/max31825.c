@@ -54,8 +54,6 @@ enum max31825_state_e
 
 struct max31825_context_s
 {
-  struct device_gpio_s pull_up_gpio;
-  gpio_id_t pull_up_gpio_id;
   struct device_onewire_s onewire;
   struct dev_onewire_rq_s onewire_rq;
   struct device_timer_s timer;
@@ -348,17 +346,7 @@ static DEV_INIT(max31825_init)
   pv->state = MAX31825_INITIALIZING;
   dev->drv_pv = pv;
 
-  err = device_get_param_dev_accessor(dev, "gpio",  &pv->pull_up_gpio.base, DRIVER_CLASS_GPIO);
-  if(err){
-    return err;
-  }
-
   err = device_get_param_dev_accessor(dev, "timer", &pv->timer.base, DRIVER_CLASS_TIMER);
-  if(err){
-    return err;
-  }
-  gpio_width_t width; // dummy parameter
-  err = device_gpio_get_setup(&pv->pull_up_gpio, dev, "pull_up", &pv->pull_up_gpio_id, &width);
   if(err){
     return err;
   }
@@ -378,10 +366,6 @@ static DEV_INIT(max31825_init)
   }
 
   dev_rq_queue_init(&pv->queue);
-
-  // Maintain Pull-up all the time on onewire line
-  DEVICE_OP(&pv->pull_up_gpio, set_mode, pv->pull_up_gpio_id, pv->pull_up_gpio_id, dev_gpio_mask1, DEV_PIN_PUSHPULL);
-  DEVICE_OP(&pv->pull_up_gpio, set_output, pv->pull_up_gpio_id, pv->pull_up_gpio_id, dev_gpio_mask1, dev_gpio_mask1);
 
   dev_timer_rq_init(&pv->timer_rq, device_power_on);
   dev_timer_init_sec(&pv->timer, &pv->timer_rq.delay, 0, pv->init_charging_time_us, 1000000);
