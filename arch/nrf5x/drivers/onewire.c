@@ -85,7 +85,8 @@ enum nrf5x_1wire_state_e
   N1W_ROM_BIT_SEL,
   N1W_DATA_WRITE,
   N1W_DATA_READ,
-  N1W_WAITING
+  N1W_WAITING_BEFORE,
+  N1W_WAITING_AFTER
 };
 
 struct nrf5x_1wire_ctx_s
@@ -104,6 +105,7 @@ struct nrf5x_1wire_ctx_s
   uint8_t bit_ptr;
   size_t byte_index;
   size_t transfer_index;
+
   
 };
 
@@ -132,7 +134,16 @@ static void n1w_request_next(struct nrf5x_1wire_ctx_s *pv, error_t err)
   pv->state = N1W_IDLE;
 
   if (pv->current) {
-    n1w_next_slot_start(pv);
+    if (pv->current->delay_before_communication_us > 0) {
+      pv->state = N1W_WAITING_BEFORE;
+        logk_trace("sleep");
+        nrf_reg_set(pv->timer_addr, NRF_TIMER_CC(CC_SLOT), pv->current->delay_before_communication_us / TIMER_PRESCALER);
+        nrf_task_trigger(pv->timer_addr, NRF_TIMER_CLEAR);
+        nrf_task_trigger(pv->timer_addr, NRF_TIMER_START);
+    }
+    else{
+        n1w_next_slot_start(pv);
+    }
   }
   else {
     logk("Tx output high only");
@@ -458,8 +469,14 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_1wire_irq)
     nrf_task_trigger(pv->timer_addr, NRF_TIMER_STOP);
     nrf_task_trigger(pv->timer_addr, NRF_TIMER_CLEAR);
     nrf_event_clear(pv->timer_addr, NRF_TIMER_COMPARE(CC_SLOT));
-
-    n1w_slot_done(pv);
+    if (pv->state == N1W_WAITING_BEFORE) {
+      logk_trace("wakeup");
+        pv->state = N1W_IDLE;
+        n1w_next_slot_start(pv);
+    }
+    else{
+      n1w_slot_done(pv);
+    }
   }
 }
 

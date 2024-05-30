@@ -248,7 +248,8 @@ static void start_temperature_request(struct max31825_context_s *pv)
   pv->onewire_rq.data.transfer = pv->transfer;
   pv->onewire_rq.data.transfer_count = 1;
   pv->onewire_rq.type = DEV_ONEWIRE_RAW;
-
+  pv->onewire_rq.delay_before_communication_us = 0;
+  pv->onewire_rq.delay_after_communication_us = 0;
 
   pv->transfer[0].direction = DEV_ONEWIRE_WRITE;
   pv->tx_data[0] = SELECT_ADRESS_CMD;
@@ -307,33 +308,6 @@ static KROUTINE_EXEC(detect_adress_done)
   process_next_request(pv);
 }
 
-
-static
-KROUTINE_EXEC(device_power_on)
-{
-  struct dev_timer_rq_s *rq = dev_timer_rq_from_kr(kr);
-  struct max31825_context_s *pv = max31825_context_s_from_timer_rq(rq);
-  
-  logk_trace("Starting enumeration");
-  
-  // Request all MAX31825 devices on the bus to measure the adress defined by
-  // the resistance value on their ADD0 pin 
-  dev_onewire_rq_init(&pv->onewire_rq, detect_adress_done);
-
-  pv->onewire_rq.data.transfer = pv->transfer;
-  pv->onewire_rq.data.transfer_count = 1;
-  pv->onewire_rq.data.rom=0;
-  pv->onewire_rq.type = DEV_ONEWIRE_DATA;
-
-
-  pv->transfer[0].direction = DEV_ONEWIRE_WRITE;
-  pv->tx_data[0] = DETECT_ADRESS_CMD;
-  pv->transfer[0].data = pv->tx_data;
-  pv->transfer[0].size = 1;
-
-  DEVICE_OP(&pv->onewire, request, &pv->onewire_rq);
-}
-
 static DEV_INIT(max31825_init)
 {
   struct max31825_context_s *pv;
@@ -383,10 +357,23 @@ static DEV_INIT(max31825_init)
   DEVICE_OP(&pv->pull_up_gpio, set_mode, pv->pull_up_gpio_id, pv->pull_up_gpio_id, dev_gpio_mask1, DEV_PIN_PUSHPULL);
   DEVICE_OP(&pv->pull_up_gpio, set_output, pv->pull_up_gpio_id, pv->pull_up_gpio_id, dev_gpio_mask1, dev_gpio_mask1);
 
-  dev_timer_rq_init(&pv->timer_rq, device_power_on);
-  dev_timer_init_sec(&pv->timer, &pv->timer_rq.delay, 0, pv->init_charging_time_us, 1000000);
+  // Request all MAX31825 devices on the bus to measure the adress defined by
+  // the resistance value on their ADD0 pin 
+  dev_onewire_rq_init(&pv->onewire_rq, detect_adress_done);
 
-  DEVICE_OP(&pv->timer, request, &pv->timer_rq);
+  pv->onewire_rq.data.transfer = pv->transfer;
+  pv->onewire_rq.data.transfer_count = 1;
+  pv->onewire_rq.data.rom=0;
+  pv->onewire_rq.type = DEV_ONEWIRE_DATA;
+  pv->onewire_rq.delay_before_communication_us = pv->init_charging_time_us;
+  pv->onewire_rq.delay_after_communication_us = 0;
+
+  pv->transfer[0].direction = DEV_ONEWIRE_WRITE;
+  pv->tx_data[0] = DETECT_ADRESS_CMD;
+  pv->transfer[0].data = pv->tx_data;
+  pv->transfer[0].size = 1;
+
+  DEVICE_OP(&pv->onewire, request, &pv->onewire_rq);
   
   return 0;
 }

@@ -142,6 +142,9 @@ struct dev_onewire_rq_s
   /** Request type */
   enum dev_onewire_rq_type_e  BITFIELD(type,2);
 
+  uint32_t delay_before_communication_us; 
+  uint32_t delay_after_communication_us;
+  
   union {
     struct dev_onewire_data_s data;
     struct dev_onewire_search_s search;
