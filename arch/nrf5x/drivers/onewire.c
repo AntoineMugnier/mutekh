@@ -113,45 +113,52 @@ DRIVER_PV(struct nrf5x_1wire_ctx_s);
 
 static void n1w_next_slot_start(struct nrf5x_1wire_ctx_s *pv);
 
-static void n1w_request_next(struct nrf5x_1wire_ctx_s *pv, error_t err)
+
+static void n1w_request_next(struct nrf5x_1wire_ctx_s *pv)
 {
-  struct dev_onewire_rq_s *rq = pv->current;
-
-  pv->current = NULL;
-
-  if (rq) {
-    rq->error = err;
-
-    logk_trace("rq %p done", rq);
-
-    dev_onewire_rq_done(rq);
-  }
 
   pv->current = dev_onewire_rq_pop(&pv->queue);
 
-  logk_trace("rq %p start", pv->current);
-
-  pv->state = N1W_IDLE;
-
   if (pv->current) {
+    logk_trace("rq %p start", pv->current);
     if (pv->current->delay_before_communication_us > 0) {
       pv->state = N1W_WAITING_BEFORE;
-        logk_trace("sleep");
-        nrf_reg_set(pv->timer_addr, NRF_TIMER_CC(CC_SLOT), pv->current->delay_before_communication_us / TIMER_PRESCALER);
-        nrf_task_trigger(pv->timer_addr, NRF_TIMER_CLEAR);
-        nrf_task_trigger(pv->timer_addr, NRF_TIMER_START);
+      logk_trace("sleep before");
+      nrf_reg_set(pv->timer_addr, NRF_TIMER_CC(CC_SLOT), pv->current->delay_before_communication_us / TIMER_PRESCALER);
+      nrf_task_trigger(pv->timer_addr, NRF_TIMER_CLEAR);
+      nrf_task_trigger(pv->timer_addr, NRF_TIMER_START);
     }
     else{
         n1w_next_slot_start(pv);
     }
+  } 
+}
+
+static void n1w_end_communication(struct nrf5x_1wire_ctx_s *pv, error_t err)
+{
+  struct dev_onewire_rq_s *rq = pv->current;
+
+  rq->error = err;
+
+  logk_trace("Tx output high only");
+  // High output enabled to power on strongly the bus when not performing 
+  //communication with onewire slave
+  nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_PIN_CNF(pv->io[0]), 0
+              | NRF_GPIO_PIN_CNF_DIR_OUTPUT
+              | NRF_GPIO_PIN_CNF_DRIVE_D0S1);
+
+  if (rq->delay_after_communication_us > 0) {
+    pv->state = N1W_WAITING_AFTER;
+    logk_trace("sleep after");
+    nrf_reg_set(pv->timer_addr, NRF_TIMER_CC(CC_SLOT), rq->delay_after_communication_us / TIMER_PRESCALER);
+    nrf_task_trigger(pv->timer_addr, NRF_TIMER_CLEAR);
+    nrf_task_trigger(pv->timer_addr, NRF_TIMER_START);
   }
-  else {
-    logk("Tx output high only");
-    // High output enabled to power on strongly the bus when not performing 
-    //communication with onewire slave
-    nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_PIN_CNF(pv->io[0]), 0
-                | NRF_GPIO_PIN_CNF_DIR_OUTPUT
-                | NRF_GPIO_PIN_CNF_DRIVE_D0S1);
+  else{
+    pv->state = N1W_IDLE;
+    logk_trace("rq %p done", rq);
+    dev_onewire_rq_done(rq);
+    n1w_request_next(pv);
   }
 }
 
@@ -171,7 +178,7 @@ static void n1w_reset_start(struct nrf5x_1wire_ctx_s *pv)
 {
   logk_trace("%s", __func__);
 
-  logk("Tx output low only");
+  logk_trace("Tx output low only");
   // High output is disabled for master data line so the onewire slave can drive it high 
   // to signal ever a 1 or 0
   nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_PIN_CNF(pv->io[0]), 0
@@ -193,7 +200,7 @@ static bool_t n1w_reset_collect(struct nrf5x_1wire_ctx_s *pv)
 {
   uint32_t cc = nrf_reg_get(pv->timer_addr, NRF_TIMER_CC(CC_RISE));
 
-  logk("%s %d", __func__, cc);
+  logk_trace("%s %d", __func__, cc);
 
   return cc > pv->bitbang_delay + T_RST_TH;
 }
@@ -229,7 +236,6 @@ static bool_t n1w_bit_rx_collect(struct nrf5x_1wire_ctx_s *pv)
 
 static void n1w_next_slot_start(struct nrf5x_1wire_ctx_s *pv)
 {
-  logk_trace("slot start %p", pv->current);
 
   if (!pv->current)
     return;
@@ -240,23 +246,22 @@ static void n1w_next_slot_start(struct nrf5x_1wire_ctx_s *pv)
     // fallthrough
   case N1W_RESET:
     n1w_reset_start(pv);
-    return;
+    break;
 
   case N1W_ROM_MATCH:
     n1w_bit_tx_start(pv, (pv->current->data.rom->raw >> pv->bit_ptr) & 1);
-    return;
+    break;
 
   case N1W_ROM_COMMAND:
   case N1W_DATA_WRITE:
     n1w_bit_tx_start(pv, (pv->buffer >> pv->bit_ptr) & 1);
-    return;
+    break;
 
   case N1W_ROM_READ_P:
   case N1W_ROM_READ_N:
   case N1W_DATA_READ:
     n1w_bit_rx_start(pv);
-    return;
-
+    break;
   case N1W_ROM_BIT_SEL:
     if (pv->bit_ptr < pv->current->search.discover_after) {
       n1w_bit_tx_start(pv, bit_get(pv->current->search.rom.raw, pv->bit_ptr));
@@ -270,8 +275,12 @@ static void n1w_next_slot_start(struct nrf5x_1wire_ctx_s *pv)
         n1w_bit_tx_start(pv, 0);
       }
     }
+    break;
+  default:
     return;
   }
+
+  logk_trace("slot start %p", pv->current);
 }
 
 static void n1w_transfer_setup(struct nrf5x_1wire_ctx_s *pv)
@@ -282,7 +291,7 @@ static void n1w_transfer_setup(struct nrf5x_1wire_ctx_s *pv)
     return;
 
   if (pv->transfer_index >= pv->current->data.transfer_count)
-    return n1w_request_next(pv, 0);
+    return n1w_end_communication(pv, 0);
 
   struct dev_onewire_transfer_s *cur = &pv->current->data.transfer[pv->transfer_index];
 
@@ -336,7 +345,7 @@ static void n1w_slot_done(struct nrf5x_1wire_ctx_s *pv)
     } else {
       // Presence failure
       logk_trace("Presence failure");
-      return n1w_request_next(pv, -ENOENT);
+      return n1w_end_communication(pv, -ENOENT);
     }
     break;
 
@@ -396,7 +405,7 @@ static void n1w_slot_done(struct nrf5x_1wire_ctx_s *pv)
     pv->state = N1W_ROM_BIT_SEL;
     pv->buffer |= n1w_bit_rx_collect(pv) << 1;
     if (pv->buffer == 3)
-      return n1w_request_next(pv, -EIO);
+      return n1w_end_communication(pv, -EIO);
     break;
 
   case N1W_DATA_READ:
@@ -425,7 +434,7 @@ static void n1w_slot_done(struct nrf5x_1wire_ctx_s *pv)
       if (expected_buffer == pv->buffer || pv->buffer == 0) {
         pv->buffer = expected_buffer;
       } else {
-        return n1w_request_next(pv, -ENOENT);
+        return n1w_end_communication(pv, -ENOENT);
       }
     } else {
       if (pv->buffer == 1)
@@ -438,14 +447,14 @@ static void n1w_slot_done(struct nrf5x_1wire_ctx_s *pv)
         // Choose 0
         pv->buffer = 2;
       } else {
-        return n1w_request_next(pv, -EIO);
+        return n1w_end_communication(pv, -EIO);
       }
     }
 
     pv->bit_ptr++;
     if (pv->bit_ptr > 63) {
       // Selection DONE
-      return n1w_request_next(pv, 0);
+      return n1w_end_communication(pv, 0);
     } else {
       pv->state = N1W_ROM_READ_P;
     }
@@ -460,19 +469,25 @@ static DEV_IRQ_SRC_PROCESS(nrf5x_1wire_irq)
 {
   struct device_s *dev = ep->base.dev;
   struct nrf5x_1wire_ctx_s *pv = dev->drv_pv;
+  LOCK_SPIN_SCOPED(&dev->lock);
 
   logk_trace("irq");
-
-  LOCK_SPIN_SCOPED(&dev->lock);
 
   if (nrf_event_check(pv->timer_addr, NRF_TIMER_COMPARE(CC_SLOT))) {
     nrf_task_trigger(pv->timer_addr, NRF_TIMER_STOP);
     nrf_task_trigger(pv->timer_addr, NRF_TIMER_CLEAR);
     nrf_event_clear(pv->timer_addr, NRF_TIMER_COMPARE(CC_SLOT));
     if (pv->state == N1W_WAITING_BEFORE) {
-      logk_trace("wakeup");
+        logk_trace("wakeup before");
         pv->state = N1W_IDLE;
         n1w_next_slot_start(pv);
+    }
+    else if(pv->state == N1W_WAITING_AFTER){
+        logk_trace("wakeup after");
+        pv->state = N1W_IDLE;
+        logk_trace("rq %p done", pv->current);
+        dev_onewire_rq_done(pv->current);
+        n1w_request_next(pv);    
     }
     else{
       n1w_slot_done(pv);
@@ -485,10 +500,10 @@ DEV_ONEWIRE_REQUEST(nrf5x_1wire_request)
 {
   struct device_s *dev = accessor->dev;
   struct nrf5x_1wire_ctx_s *pv = dev->drv_pv;
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
   logk_trace("request %p", rq);
 
-  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
   if (rq->type == DEV_ONEWIRE_SEARCH) {
     rq->search.collision.raw = 0;
@@ -497,7 +512,7 @@ DEV_ONEWIRE_REQUEST(nrf5x_1wire_request)
   dev_onewire_rq_pushback(&pv->queue, rq);
   
   if (!pv->current)
-    n1w_request_next(pv, 0);
+    n1w_request_next(pv);
 }
 
 #define nrf5x_1wire_use dev_use_generic
@@ -544,7 +559,7 @@ static DEV_INIT(nrf5x_1wire_init)
   nrf_task_trigger(pv->timer_addr, NRF_TIMER_STOP);
   nrf_task_trigger(pv->timer_addr, NRF_TIMER_CLEAR);
 
-  nrf_reg_set(pv->timer_addr, NRF_TIMER_BITMODE, NRF_TIMER_BITMODE_16);
+  nrf_reg_set(pv->timer_addr, NRF_TIMER_BITMODE, NRF_TIMER_BITMODE_32);
   nrf_reg_set(pv->timer_addr, NRF_TIMER_MODE, NRF_TIMER_MODE_TIMER);
   nrf_reg_set(pv->timer_addr, NRF_TIMER_PRESCALER,
 #if TIMER_PRESCALER == 1

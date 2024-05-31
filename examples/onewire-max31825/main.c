@@ -25,8 +25,8 @@ KROUTINE_EXEC(app_temp_changed)
 {
   struct dev_valio_rq_s *rq = dev_valio_rq_from_kr(kr);
   struct app_s *app = app_s_from_max31825_r_rq(rq);
-
-  logk("Temperature now %d K", app->temp_r_u1_val_kelvin);
+  static uint32_t counter = 0;
+  logk("Temperature now %d mK , cnt %d", app->temp_r_u1_val_kelvin, counter++);
 
   DEVICE_OP(&app->max31825_r_bus, request, &app->max31825_r_rq);
 }

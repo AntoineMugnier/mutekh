@@ -52,6 +52,12 @@ enum max31825_state_e
 #define READ_SCRATCHPAD_CMD 0xBE
 #define CONVERT_T_CMD 0x44
 
+// Conversion time specified for every temperature sensor resolution
+#define MAX31825_CONV_TIME_8_BITS_MS 9
+#define MAX31825_CONV_TIME_9_BITS_MS 18
+#define MAX31825_CONV_TIME_10_BITS_MS 35
+#define MAX31825_CONV_TIME_12_BITS_MS 140
+
 struct max31825_context_s
 {
   struct device_gpio_s pull_up_gpio;
@@ -95,17 +101,17 @@ static void process_next_request(struct max31825_context_s *pv){
 
 // For debug
 static void print_sp(uint8_t rx_data[]){
-  logk("Scratchpad is:");
-  logk("Temperature LSB %x", rx_data[0]);
-  logk("Temperature MSB %x", rx_data[1]);
-  logk("Status [TH, TL state, address] %x", rx_data[2]);
-  logk("Configuration %x", rx_data[3]);
-  logk("TH MSB  %x", rx_data[4]);
-  logk("TH LSB  %x", rx_data[5]);
-  logk("TL LSB %x", rx_data[6]);
-  logk("TL MSB  %x", rx_data[7]);
-  logk("CRC %x", rx_data[8]);
-  logk("address  %x", rx_data[2] & 0x3f );
+  logk_trace("Scratchpad is:");
+  logk_trace("Temperature LSB %x", rx_data[0]);
+  logk_trace("Temperature MSB %x", rx_data[1]);
+  logk_trace("Status [TH, TL state, address] %x", rx_data[2]);
+  logk_trace("Configuration %x", rx_data[3]);
+  logk_trace("TH MSB  %x", rx_data[4]);
+  logk_trace("TH LSB  %x", rx_data[5]);
+  logk_trace("TL LSB %x", rx_data[6]);
+  logk_trace("TL MSB  %x", rx_data[7]);
+  logk_trace("CRC %x", rx_data[8]);
+  logk_trace("address  %x", rx_data[2] & 0x3f );
 }
 
 
@@ -179,7 +185,7 @@ static KROUTINE_EXEC(scratchpad_read_done)
     uint32_t temp_milikelvin = (raw_temp*625)/10 + 273150;
     struct valio_temperature_s* rq_data = (struct valio_temperature_s*) pv->current_user_rq->data;
     
-    logk(" Temperature read is :  %d.%04d C or %d mK",
+    logk_trace(" Temperature read is :  %d.%04d C or %d mK",
     raw_temp / 16, 625 * ((raw_temp < 0 ? 0x10 - (raw_temp & 0xf) : (raw_temp & 0xf))), temp_milikelvin);
 
     rq_data->temperature = temp_milikelvin;
@@ -195,7 +201,7 @@ static KROUTINE_EXEC(scratchpad_read_done)
 
 static void start_read_scratchpad(struct max31825_context_s *pv){
 
-  logk("Starting scratchpad read");
+  logk_trace("Starting scratchpad read");
   pv->state = MAX31825_READING_TEMP;
 
   dev_onewire_rq_init(&pv->onewire_rq, scratchpad_read_done);
@@ -203,7 +209,8 @@ static void start_read_scratchpad(struct max31825_context_s *pv){
   pv->onewire_rq.data.transfer = pv->transfer;
   pv->onewire_rq.data.transfer_count = 2;
   pv->onewire_rq.type = DEV_ONEWIRE_RAW;
-
+  pv->onewire_rq.delay_before_communication_us = 0;
+  pv->onewire_rq.delay_after_communication_us = 0;
 
   pv->transfer[0].direction = DEV_ONEWIRE_WRITE;
   pv->tx_data[0] = SELECT_ADRESS_CMD;
@@ -215,41 +222,29 @@ static void start_read_scratchpad(struct max31825_context_s *pv){
   pv->transfer[1].data = pv->rx_data;
   pv->transfer[1].size = 9;
   memset(pv->rx_data, 0, pv->transfer[1].size);
-
   DEVICE_OP(&pv->onewire, request, &pv->onewire_rq);
 }
 
 static KROUTINE_EXEC(conversion_done)
 {
-  struct dev_timer_rq_s *rq = dev_timer_rq_from_kr(kr);
-  struct max31825_context_s *pv = max31825_context_s_from_timer_rq(rq);
-  start_read_scratchpad(pv);
-}
-
-static KROUTINE_EXEC(performing_conversion)
-{
   struct dev_onewire_rq_s *rq = dev_onewire_rq_from_kr(kr);
   struct max31825_context_s *pv = max31825_context_s_from_onewire_rq(rq);
-
-  dev_timer_rq_init(&pv->timer_rq, conversion_done);
-  dev_timer_init_sec(&pv->timer, &pv->timer_rq.delay, 0, 2, 1); // TODO ADJUST
-  DEVICE_OP(&pv->timer, request, &pv->timer_rq);
-
+  start_read_scratchpad(pv);
 }
 
 static void start_temperature_request(struct max31825_context_s *pv)
 {
 
-  logk("Starting temperature request");
+  logk_trace("Starting temperature request");
   pv->state = MAX31825_CONVERTING_TEMP;
 
-  dev_onewire_rq_init(&pv->onewire_rq, performing_conversion);
+  dev_onewire_rq_init(&pv->onewire_rq, conversion_done);
 
   pv->onewire_rq.data.transfer = pv->transfer;
   pv->onewire_rq.data.transfer_count = 1;
   pv->onewire_rq.type = DEV_ONEWIRE_RAW;
   pv->onewire_rq.delay_before_communication_us = 0;
-  pv->onewire_rq.delay_after_communication_us = 0;
+  pv->onewire_rq.delay_after_communication_us = MAX31825_CONV_TIME_12_BITS_MS*1000;
 
   pv->transfer[0].direction = DEV_ONEWIRE_WRITE;
   pv->tx_data[0] = SELECT_ADRESS_CMD;

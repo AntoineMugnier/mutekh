@@ -11,7 +11,7 @@ CONFIG_LICENSE_APP_BSD
 
 %inherit printk-rtt
 CONFIG_MUTEK_PRINTK_RUNTIME_EXPR 1
-CONFIG_MUTEK_PRINTK_COMPILE_EXPR level >= LOGK_LEVEL_NORMAL || id == 'n1ws'
+CONFIG_MUTEK_PRINTK_COMPILE_EXPR level >= LOGK_LEVEL_NORMAL //|| id == '3182' || id == 'n1ws' 
 
 %inherit ellisys-mwp1-probe_interposer_a
 %include ellisys/ellisys.build
