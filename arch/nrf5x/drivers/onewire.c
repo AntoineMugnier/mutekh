@@ -202,7 +202,7 @@ static bool_t n1w_reset_collect(struct nrf5x_1wire_ctx_s *pv)
 
   logk_trace("%s %d", __func__, cc);
 
-  return cc > pv->bitbang_delay + T_RST_TH;
+  return cc > (pv->bitbang_delay + T_RST_TH);
 }
 
 static void n1w_bit_tx_start(struct nrf5x_1wire_ctx_s *pv, bool_t value)
@@ -231,7 +231,7 @@ static bool_t n1w_bit_rx_collect(struct nrf5x_1wire_ctx_s *pv)
 
   logk_trace("%s %d", __func__, cc);
 
-  return cc < pv->bitbang_delay + T_BIT_TH;
+  return cc < (pv->bitbang_delay + T_BIT_TH);
 }
 
 static void n1w_next_slot_start(struct nrf5x_1wire_ctx_s *pv)
@@ -344,7 +344,7 @@ static void n1w_slot_done(struct nrf5x_1wire_ctx_s *pv)
       pv->bit_ptr = 0;
     } else {
       // Presence failure
-      logk_trace("Presence failure");
+      logk_error("Presence failure");
       return n1w_end_communication(pv, -ENOENT);
     }
     break;
@@ -510,7 +510,7 @@ DEV_ONEWIRE_REQUEST(nrf5x_1wire_request)
   }
   
   dev_onewire_rq_pushback(&pv->queue, rq);
-  
+
   if (!pv->current)
     n1w_request_next(pv);
 }
@@ -546,9 +546,9 @@ static DEV_INIT(nrf5x_1wire_init)
   if(err){
     return err;
   }
-  int possible_bitbang_delay = (1000000/bus_max_frequency_hz) - T_RST_SLOT;
+  int possible_bitbang_delay = (1000000/bus_max_frequency_hz) - T_BIT_SLOT;
   pv->bitbang_delay = possible_bitbang_delay >0 ? possible_bitbang_delay : 0;
-  
+
   device_irq_source_init(dev, &pv->irq_ep, 1, &nrf5x_1wire_irq);
   if (device_irq_source_link(dev, &pv->irq_ep, 1, -1))
     goto err_gpio;
@@ -610,7 +610,6 @@ static DEV_INIT(nrf5x_1wire_init)
 
  err_gpio:
   mem_free(pv);
-
   return err;
 }
 

@@ -33,7 +33,6 @@
 
 #include <device/class/valio.h>
 #include <device/valio/temperature.h>
-#include <device/class/timer.h>
 #include <device/class/onewire.h>
 #include <device/class/gpio.h>
 
@@ -60,12 +59,8 @@ enum max31825_state_e
 
 struct max31825_context_s
 {
-  struct device_gpio_s pull_up_gpio;
-  gpio_id_t pull_up_gpio_id;
   struct device_onewire_s onewire;
   struct dev_onewire_rq_s onewire_rq;
-  struct device_timer_s timer;
-  struct dev_timer_rq_s timer_rq;
   struct dev_onewire_transfer_s transfer[2];
   struct dev_valio_rq_s * current_user_rq;
 
@@ -83,7 +78,6 @@ struct max31825_context_s
 };
 
 STRUCT_COMPOSE(max31825_context_s, onewire_rq);
-STRUCT_COMPOSE(max31825_context_s, timer_rq);
 
 DRIVER_PV(struct max31825_context_s);
 
@@ -317,21 +311,6 @@ static DEV_INIT(max31825_init)
   pv->state = MAX31825_INITIALIZING;
   dev->drv_pv = pv;
 
-  err = device_get_param_dev_accessor(dev, "gpio",  &pv->pull_up_gpio.base, DRIVER_CLASS_GPIO);
-  if(err){
-    return err;
-  }
-
-  err = device_get_param_dev_accessor(dev, "timer", &pv->timer.base, DRIVER_CLASS_TIMER);
-  if(err){
-    return err;
-  }
-  gpio_width_t width; // dummy parameter
-  err = device_gpio_get_setup(&pv->pull_up_gpio, dev, "pull_up", &pv->pull_up_gpio_id, &width);
-  if(err){
-    return err;
-  }
-
   err = device_get_param_dev_accessor(dev, "onewire", &pv->onewire.base, DRIVER_CLASS_ONEWIRE);
   if(err){
     return err;
@@ -347,10 +326,6 @@ static DEV_INIT(max31825_init)
   }
 
   dev_rq_queue_init(&pv->queue);
-
-  // Maintain Pull-up all the time on onewire line
-  DEVICE_OP(&pv->pull_up_gpio, set_mode, pv->pull_up_gpio_id, pv->pull_up_gpio_id, dev_gpio_mask1, DEV_PIN_PUSHPULL);
-  DEVICE_OP(&pv->pull_up_gpio, set_output, pv->pull_up_gpio_id, pv->pull_up_gpio_id, dev_gpio_mask1, dev_gpio_mask1);
 
   // Request all MAX31825 devices on the bus to measure the adress defined by
   // the resistance value on their ADD0 pin 
