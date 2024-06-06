@@ -53,9 +53,8 @@ void app_start(void)
     err = device_get_accessor_by_path(&app->max31825_dev[sensor_index].base, NULL, device_instance_name[sensor_index], DRIVER_CLASS_VALIO);
     if(err){
       logk_error("Error getting %s device", device_instance_name[sensor_index]);
-      return err;
+      return ;
     }
-
     // Initialize request data
     app->max31825_rq_data[sensor_index].sensor_id = sensor_index + 1;
     app->max31825_rq_data[sensor_index].max31825_dev = &app->max31825_dev[sensor_index];
