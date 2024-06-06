@@ -577,6 +577,12 @@ static DEV_INIT(nrf5x_1wire_init)
 #endif
                );
 
+  // High output enabled to power on strongly the bus when not performing 
+  //communication with onewire slave
+  nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_PIN_CNF(pv->io[0]), 0
+              | NRF_GPIO_PIN_CNF_DIR_OUTPUT
+              | NRF_GPIO_PIN_CNF_DRIVE_D0S1);
+
   nrf_reg_set(NRF5X_GPIO_ADDR, NRF_GPIO_PIN_CNF(pv->io[1]), 0
               | NRF_GPIO_PIN_CNF_DIR_INPUT);
 
@@ -589,6 +595,7 @@ static DEV_INIT(nrf5x_1wire_init)
               | NRF_GPIOTE_CONFIG_PSEL(pv->io[0])
               | NRF_GPIOTE_CONFIG_OUTINIT_HIGH
               | NRF_GPIOTE_CONFIG_POLARITY_TOGGLE);
+              
   nrf_reg_set(GPIOTE_ADDR, NRF_GPIOTE_CONFIG(GPIOTE_RX), 0
               | NRF_GPIOTE_CONFIG_MODE_EVENT
               | NRF_GPIOTE_CONFIG_PSEL(pv->io[1])
@@ -611,7 +618,7 @@ static DEV_INIT(nrf5x_1wire_init)
                       );
 
   nrf_it_enable(pv->timer_addr, NRF_TIMER_COMPARE(CC_SLOT));
-
+             
   return 0;
 
  err_gpio:
