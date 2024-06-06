@@ -243,9 +243,10 @@ static void n1w_next_slot_start(struct nrf5x_1wire_ctx_s *pv)
   switch (pv->state) {
   case N1W_IDLE:
     pv->state = N1W_RESET;
-    // fallthrough
-  case N1W_RESET:
     n1w_reset_start(pv);
+    break;
+  case N1W_RESET:
+    logk_error("A new slot should not be started when doing a reset");
     break;
 
   case N1W_ROM_MATCH:
@@ -289,9 +290,6 @@ static void n1w_transfer_setup(struct nrf5x_1wire_ctx_s *pv)
 
   if (!pv->current)
     return;
-
-  if (pv->transfer_index >= pv->current->data.transfer_count)
-    return n1w_end_communication(pv, 0);
 
   struct dev_onewire_transfer_s *cur = &pv->current->data.transfer[pv->transfer_index];
 
@@ -388,7 +386,11 @@ static void n1w_slot_done(struct nrf5x_1wire_ctx_s *pv)
 
       if (pv->byte_index >= cur->size) {
         pv->transfer_index++;
-        n1w_transfer_setup(pv);
+        if (pv->transfer_index >= pv->current->data.transfer_count)
+          return n1w_end_communication(pv, 0);
+        else{
+          n1w_transfer_setup(pv);
+        }
       } else {
         pv->buffer = cur->data[pv->byte_index];
         pv->bit_ptr = 0;
@@ -420,7 +422,11 @@ static void n1w_slot_done(struct nrf5x_1wire_ctx_s *pv)
 
       if (pv->byte_index >= cur->size) {
         pv->transfer_index++;
-        n1w_transfer_setup(pv);
+        if (pv->transfer_index >= pv->current->data.transfer_count)
+          return n1w_end_communication(pv, 0);
+        else{
+          n1w_transfer_setup(pv);
+        }
       } else {
         pv->bit_ptr = 0;
       }
