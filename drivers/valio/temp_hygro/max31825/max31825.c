@@ -52,10 +52,12 @@ enum max31825_state_e
 #define CONVERT_T_CMD 0x44
 
 // Conversion time specified for every temperature sensor resolution
-#define MAX31825_CONV_TIME_8_BITS_MS 9
-#define MAX31825_CONV_TIME_9_BITS_MS 18
-#define MAX31825_CONV_TIME_10_BITS_MS 35
-#define MAX31825_CONV_TIME_12_BITS_MS 140
+#define MAX31825_CONV_TIME_8_BITS_MS 20
+#define MAX31825_CONV_TIME_9_BITS_MS 40
+#define MAX31825_CONV_TIME_10_BITS_MS 80
+#define MAX31825_CONV_TIME_12_BITS_MS 320
+
+#define SELECT_ADDRESS_CONV_TIME_US 3000 
 
 struct max31825_context_s
 {
@@ -336,7 +338,7 @@ static DEV_INIT(max31825_init)
   pv->onewire_rq.data.rom=0;
   pv->onewire_rq.type = DEV_ONEWIRE_DATA;
   pv->onewire_rq.delay_before_communication_us = pv->init_charging_time_us;
-  pv->onewire_rq.delay_after_communication_us = 0;
+  pv->onewire_rq.delay_after_communication_us = SELECT_ADDRESS_CONV_TIME_US;
 
   pv->transfer[0].direction = DEV_ONEWIRE_WRITE;
   pv->tx_data[0] = DETECT_ADRESS_CMD;
