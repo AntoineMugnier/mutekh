@@ -12,6 +12,15 @@
 #include <device/class/valio.h>
 #include <device/valio/temperature.h>
 
+//Example of a max31825 driver instance definition
+//
+//  DEV_DECLARE_STATIC(max31825_r_u1_dev, "max31825_u1", 0, max31825_drv,
+//                    DEV_STATIC_RES_DEV_ICU("/cpu"),
+//                     DEV_STATIC_RES_DEV_ONEWIRE("/onewire_r"),
+//                     DEV_STATIC_RES_UINT_PARAM("init_charging_time_us", 2500),
+//                     DEV_STATIC_RES_UINT_PARAM("device_address", 0b111111)
+//                     );
+
 
  struct max31825_rq_data{
   struct device_valio_s* max31825_dev;
@@ -47,7 +56,7 @@ void app_start(void)
   error_t err;
   
   char* device_instance_name[4] = {"max31825_u1", "max31825_u2", "max31825_u3", "max31825_u4"};
-  for (uint8_t sensor_index = 0; sensor_index < 4; sensor_index++) {
+  for (uint8_t sensor_index = 0; sensor_index < 2; sensor_index++) {
 
       // Initialize MAX31825 device
     err = device_get_accessor_by_path(&app->max31825_dev[sensor_index].base, NULL, device_instance_name[sensor_index], DRIVER_CLASS_VALIO);
