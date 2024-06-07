@@ -47,14 +47,20 @@ enum ppi_id_e
 {
   PPI_BEGIN_FALL = CONFIG_DRIVER_NRF5X_ONEWIRE_PPI_FIRST,
   PPI_END_RISE,
-  PPI_RISE_CAPTURE
+  PPI_RISE_CAPTURE,
+  PPI_COUNT,
 };
+
+#define PPI(pv, x) (((pv)->instance_index * PPI_COUNT) + PPI_##x)
 
 enum gpiote_id_e
 {
   GPIOTE_TX = CONFIG_DRIVER_NRF5X_ONEWIRE_GPIOTE_FIRST,
   GPIOTE_RX,
+  GPIOTE_COUNT,
 };
+
+#define GPIOTE(pv, x) (((pv)->instance_index * GPIOTE_COUNT) + GPIOTE_##x)
 
 enum timer_chan_e
 {
@@ -95,6 +101,7 @@ struct nrf5x_1wire_ctx_s
   struct dev_irq_src_s irq_ep;
 
   iomux_io_id_t io[2];
+  uint8_t instance_index;
 
   enum nrf5x_1wire_state_e state;
   dev_request_queue_root_t queue;
@@ -538,6 +545,21 @@ static DEV_INIT(nrf5x_1wire_init)
     return -ENOMEM;
 
   memset(pv, 0, sizeof(*pv));
+
+#if CONFIG_DRIVER_NRF5X_ONEWIRE_INSTANCE_COUNT > 1
+  uintptr_t instance;
+  err = device_get_param_uint(dev, "instance", &instance);
+  if (err)
+    goto err_gpio;
+
+  if (instance >= CONFIG_DRIVER_NRF5X_ONEWIRE_INSTANCE_COUNT) {
+    err = -EINVAL;
+    goto err_gpio;
+  }
+
+  pv->instance = instance;
+#endif
+
   pv->timer_addr = addr;
   dev->drv_pv = pv;
   err = device_iomux_setup(dev, ",dq ^dqpw?", NULL, pv->io, NULL);
@@ -590,31 +612,31 @@ static DEV_INIT(nrf5x_1wire_init)
                 | bit(NRF_TIMER_COMPARE_STOP(CC_SLOT))
                 | bit(NRF_TIMER_COMPARE_CLEAR(CC_SLOT)));
 
-  nrf_reg_set(GPIOTE_ADDR, NRF_GPIOTE_CONFIG(GPIOTE_TX), 0
+  nrf_reg_set(GPIOTE_ADDR, NRF_GPIOTE_CONFIG(GPIOTE(pv, TX)), 0
               | NRF_GPIOTE_CONFIG_MODE_TASK
               | NRF_GPIOTE_CONFIG_PSEL(pv->io[0])
               | NRF_GPIOTE_CONFIG_OUTINIT_HIGH
               | NRF_GPIOTE_CONFIG_POLARITY_TOGGLE);
               
-  nrf_reg_set(GPIOTE_ADDR, NRF_GPIOTE_CONFIG(GPIOTE_RX), 0
+  nrf_reg_set(GPIOTE_ADDR, NRF_GPIOTE_CONFIG(GPIOTE(pv, RX)), 0
               | NRF_GPIOTE_CONFIG_MODE_EVENT
               | NRF_GPIOTE_CONFIG_PSEL(pv->io[1])
               | NRF_GPIOTE_CONFIG_POLARITY_LOTOHI);
 
-  nrf_ppi_setup(PPI_BEGIN_FALL,
+  nrf_ppi_setup(PPI(pv, BEGIN_FALL),
                 pv->timer_addr, NRF_TIMER_COMPARE(CC_BEGIN),
-                GPIOTE_ADDR, NRF_GPIOTE_OUT(GPIOTE_TX));
-  nrf_ppi_setup(PPI_END_RISE,
+                GPIOTE_ADDR, NRF_GPIOTE_OUT(GPIOTE(pv, TX)));
+  nrf_ppi_setup(PPI(pv, END_RISE),
                 pv->timer_addr, NRF_TIMER_COMPARE(CC_END),
-                GPIOTE_ADDR, NRF_GPIOTE_OUT(GPIOTE_TX));
-  nrf_ppi_setup(PPI_RISE_CAPTURE,
-                GPIOTE_ADDR, NRF_GPIOTE_IN(GPIOTE_RX),
+                GPIOTE_ADDR, NRF_GPIOTE_OUT(GPIOTE(pv, TX)));
+  nrf_ppi_setup(PPI(pv, RISE_CAPTURE),
+                GPIOTE_ADDR, NRF_GPIOTE_IN(GPIOTE(pv, RX)),
                 pv->timer_addr, NRF_TIMER_CAPTURE(CC_RISE));
 
   nrf_ppi_enable_mask(0
-                      | bit(PPI_BEGIN_FALL)
-                      | bit(PPI_END_RISE)
-                      | bit(PPI_RISE_CAPTURE)
+                      | bit(PPI(pv, BEGIN_FALL))
+                      | bit(PPI(pv, END_RISE))
+                      | bit(PPI(pv, RISE_CAPTURE))
                       );
 
   nrf_it_enable(pv->timer_addr, NRF_TIMER_COMPARE(CC_SLOT));
