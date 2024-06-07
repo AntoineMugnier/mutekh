@@ -154,7 +154,7 @@ static KROUTINE_EXEC(scratchpad_read_done)
   struct dev_onewire_rq_s *rq = dev_onewire_rq_from_kr(kr);
   struct max31825_context_s *pv = max31825_context_s_from_onewire_rq(rq);
 
-  print_sp(pv->rx_data); //TODO logk_trace
+  print_sp(pv->rx_data);
   
   // Check that device address matches to requested
   uint8_t inspected_device_adress = pv->rx_data[2] & 0x3f;
@@ -191,7 +191,6 @@ static KROUTINE_EXEC(scratchpad_read_done)
 
   pv->state = MAX31825_IDLE;
 
-  //TODO Spin lock here ?
   process_next_request(pv);
 }
 
@@ -264,18 +263,17 @@ DEV_VALIO_REQUEST(max31825_request)
 {
   struct device_s *dev = accessor->dev;
   struct max31825_context_s *pv = dev->drv_pv;
+  LOCK_SPIN_IRQ_SCOPED(&dev->lock);
 
   if (rq->type == DEVICE_VALIO_READ &&
   rq->attribute == VALIO_TEMPERATURE_VALUE){
 
     rq->error = 0;
-    LOCK_SPIN_IRQ(&dev->lock);
     dev_valio_rq_pushback(&pv->queue, rq);
 
     if (pv->state == MAX31825_IDLE){
       process_next_request(pv);  
     }
-    LOCK_RELEASE_IRQ(&dev->lock);
   }
   else{
         rq->error = -ENOTSUP;
@@ -283,11 +281,6 @@ DEV_VALIO_REQUEST(max31825_request)
   }
 }
 
-static
-DEV_VALIO_CANCEL(max31825_cancel)
-{
-  //TODO Implement
-}
 
 #define max31825_use dev_use_generic
 
@@ -350,9 +343,23 @@ static DEV_INIT(max31825_init)
   return 0;
 }
 
+static
+DEV_VALIO_CANCEL(max31825_cancel)
+{
+  return -ENOTSUP;
+}
+
 static DEV_CLEANUP(max31825_cleanup)
 {
-  //TODO Implement
+  struct max31825_context_s *pv = dev->drv_pv;
+
+  if (!dev_rq_queue_isempty(&pv->queue))
+    return -EBUSY;
+
+  dev_rq_queue_destroy(&pv->queue);
+
+  mem_free(pv);
+
   return 0;
 }
 
