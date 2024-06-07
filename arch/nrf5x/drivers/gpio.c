@@ -614,6 +614,7 @@ static DEV_INIT(nrf5x_gpio_init)
     if (pin == CONFIG_DRIVER_NRF5X_PRINTK_PIN)
       continue;
 #endif
+      continue;
     nrf_reg_set(GPIO_ADDR, NRF_GPIO_PIN_CNF(pin), 0
                 | NRF_GPIO_PIN_CNF_DIR_INPUT
                 | NRF_GPIO_PIN_CNF_INPUT_DISCONNECT);
