@@ -311,7 +311,7 @@ void device_sleep_schedule(struct device_s *dev);
       .res_tbl = ARRAY_SIZE(DEV_STATIC_RESOURCES_ARRAY(resources_))     \
       ? (struct dev_resource_table_s *)DEV_STATIC_RESOURCES(resources_) \
       : NULL,                                                           \
-    };
+    }
 #endif
 
 
