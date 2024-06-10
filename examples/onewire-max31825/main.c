@@ -43,6 +43,7 @@ KROUTINE_EXEC(temp_update)
   struct max31825_rq_data* data  = rq->base.pvdata;
   static uint32_t counter = 0;
   logk("Temperature now U%d %d mK , cnt %d", data->sensor_id, data->temp_kelvin, counter++);
+
   DEVICE_OP(data->max31825_dev, request, rq);
 }
 
@@ -56,7 +57,7 @@ void app_start(void)
   error_t err;
   
   char* device_instance_name[4] = {"max31825_u1", "max31825_u2", "max31825_u3", "max31825_u4"};
-  for (uint8_t sensor_index = 0; sensor_index < 2; sensor_index++) {
+  for (uint8_t sensor_index = 0; sensor_index < 4; sensor_index++) {
 
       // Initialize MAX31825 device
     err = device_get_accessor_by_path(&app->max31825_dev[sensor_index].base, NULL, device_instance_name[sensor_index], DRIVER_CLASS_VALIO);

@@ -48,18 +48,16 @@ enum ppi_id_e
   PPI_BEGIN_FALL = CONFIG_DRIVER_NRF5X_ONEWIRE_PPI_FIRST,
   PPI_END_RISE,
   PPI_RISE_CAPTURE,
-  PPI_COUNT,
 };
-
+#define PPI_COUNT 3
 #define PPI(pv, x) (((pv)->instance_index * PPI_COUNT) + PPI_##x)
 
 enum gpiote_id_e
 {
   GPIOTE_TX = CONFIG_DRIVER_NRF5X_ONEWIRE_GPIOTE_FIRST,
   GPIOTE_RX,
-  GPIOTE_COUNT,
 };
-
+#define GPIOTE_COUNT 2
 #define GPIOTE(pv, x) (((pv)->instance_index * GPIOTE_COUNT) + GPIOTE_##x)
 
 enum timer_chan_e
@@ -557,7 +555,9 @@ static DEV_INIT(nrf5x_1wire_init)
     goto err_gpio;
   }
 
-  pv->instance = instance;
+  pv->instance_index = instance;
+#else
+  pv->instance_index = 0;
 #endif
 
   pv->timer_addr = addr;
@@ -573,7 +573,7 @@ static DEV_INIT(nrf5x_1wire_init)
   err = device_get_param_uint(dev, "bus_max_frequency_hz", &bus_max_frequency_hz);
   if(err){
     return err;
-  }
+  } //TODO MAX FREQ WHEN UNDEFINED
   int possible_bitbang_delay = (1000000/bus_max_frequency_hz)/TIMER_PRESCALER - T_BIT_SLOT;
   pv->bitbang_delay = possible_bitbang_delay >0 ? possible_bitbang_delay : 0;
 
