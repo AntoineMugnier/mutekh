@@ -552,7 +552,7 @@ static DEV_INIT(nrf5x_1wire_init)
   if(err){
     return err;
   }
-  int possible_bitbang_delay = (1000000/bus_max_frequency_hz) - T_BIT_SLOT;
+  int possible_bitbang_delay = (1000000/bus_max_frequency_hz)/TIMER_PRESCALER - T_BIT_SLOT;
   pv->bitbang_delay = possible_bitbang_delay >0 ? possible_bitbang_delay : 0;
 
   device_irq_source_init(dev, &pv->irq_ep, 1, &nrf5x_1wire_irq);
