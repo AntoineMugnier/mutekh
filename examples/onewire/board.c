@@ -37,8 +37,8 @@ DEV_DECLARE_STATIC(onewire_dev, "1wire", 0, nrf5x_1wire_drv,
                    DEV_STATIC_RES_FREQ_ACC(16000000, 1, 2, 25),
 # endif
                    DEV_STATIC_RES_DEV_IOMUX("/gpio"),
-                   DEV_STATIC_RES_IOMUX("dq", 0, 42, 0, 0),
-                   DEV_STATIC_RES_IOMUX("dqpw", 0, 45, 0, 0),
+                   DEV_STATIC_RES_IOMUX("tx", 0, 42, 0, 0),
+                   DEV_STATIC_RES_IOMUX("rx", 0, 45, 0, 0),
                    );
 
 #endif

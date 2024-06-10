@@ -562,7 +562,7 @@ static DEV_INIT(nrf5x_1wire_init)
 
   pv->timer_addr = addr;
   dev->drv_pv = pv;
-  err = device_iomux_setup(dev, ",dq ^dqpw?", NULL, pv->io, NULL);
+  err = device_iomux_setup(dev, ",tx ^rx?", NULL, pv->io, NULL);
   if (err)
     goto err_gpio;
 
@@ -573,7 +573,7 @@ static DEV_INIT(nrf5x_1wire_init)
   err = device_get_param_uint(dev, "bus_max_frequency_hz", &bus_max_frequency_hz);
   if(err){
     return err;
-  } //TODO MAX FREQ WHEN UNDEFINED
+  }
   int possible_bitbang_delay = (1000000/bus_max_frequency_hz)/TIMER_PRESCALER - T_BIT_SLOT;
   pv->bitbang_delay = possible_bitbang_delay >0 ? possible_bitbang_delay : 0;
 
