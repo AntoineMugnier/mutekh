@@ -142,6 +142,9 @@ struct dev_onewire_rq_s
   /** Request type */
   enum dev_onewire_rq_type_e  BITFIELD(type,2);
 
+  uint32_t delay_before_communication_us; 
+  uint32_t delay_after_communication_us;
+  
   union {
     struct dev_onewire_data_s data;
     struct dev_onewire_search_s search;
@@ -248,7 +251,7 @@ error_t dev_onewire_wait_write(
 
 #ifdef CONFIG_DEVICE_ONEWIRE
 # define DEV_STATIC_RES_DEV_ONEWIRE(path_)                          \
-  DEV_STATIC_RES_DEVCLASS_PARAM("1wire", path_, DRIVER_CLASS_ONEWIRE)
+  DEV_STATIC_RES_DEVCLASS_PARAM("onewire", path_, DRIVER_CLASS_ONEWIRE)
 #else
 # define DEV_STATIC_RES_DEV_ONEWIRE(path_) { .type = DEV_RES_UNUSED, }
 #endif
